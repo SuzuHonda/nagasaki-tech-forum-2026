@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PCCS トーンマップ カラーチャート</title>
+<style>
+:root {
+  --bg: #1a1a2e;
+  --bg2: #16213e;
+  --text: #e0e0e0;
+  --text2: #a0a0b0;
+  --accent: #e94560;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', 'Noto Sans JP', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+/* ===== Main Layout ===== */
+.main-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  max-width: 1400px;
+  height: 100%;
+  margin: 0 auto;
+}
+
+/* ===== Neutral Strip ===== */
+.neutral-strip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 8px;
+  background: var(--bg2);
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+  min-width: 60px;
+  flex-shrink: 0;
+}
+.neutral-strip-title {
+  font-size: 0.65rem;
+  color: var(--text2);
+  margin-bottom: 4px;
+  writing-mode: horizontal-tb;
+  white-space: nowrap;
+}
+.neutral-cell {
+  width: 36px;
+  height: 18px;
+  border-radius: 3px;
+  cursor: grab;
+  transition: box-shadow 0.15s;
+  position: relative;
+}
+.neutral-cell:hover {
+  box-shadow: 0 0 10px rgba(255,255,255,0.3);
+  z-index: 100;
+}
+.neutral-label {
+  font-size: 0.5rem;
+  color: var(--text2);
+  text-align: center;
+  line-height: 1;
+}
+
+/* ===== Tone Map Grid ===== */
+.tone-map {
+  position: relative;
+  width: 1200px;
+  height: 100vh;
+  flex-shrink: 0;
+}
+
+/* ===== Tone Ring ===== */
+.tone-ring {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tone-ring-label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.85);
+  text-shadow: 0 0 8px rgba(0,0,0,0.8);
+  z-index: 10;
+  pointer-events: none;
+  text-align: center;
+  line-height: 1.1;
+}
+.tone-ring-sublabel {
+  font-size: 0.55rem;
+  font-weight: 400;
+  color: rgba(255,255,255,0.5);
+  display: block;
+}
+.hue-dot {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: grab;
+  transition: box-shadow 0.12s ease;
+}
+.hue-dot:hover {
+  box-shadow: 0 0 14px rgba(255,255,255,0.5);
+  z-index: 200;
+}
+.hue-dot.interpolated {
+  border-style: dashed;
+  border-color: rgba(255,255,255,0.3);
+}
+
+/* ===== Tooltip ===== */
+.tooltip {
+  position: fixed;
+  display: none;
+  background: rgba(10, 10, 25, 0.96);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 10px;
+  padding: 12px 16px;
+  z-index: 9999;
+  pointer-events: none;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+  min-width: 200px;
+  max-width: 280px;
+}
+.tooltip-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.tooltip-swatch {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  border: 2px solid rgba(255,255,255,0.2);
+  flex-shrink: 0;
+}
+.tooltip-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.tooltip-subtitle {
+  font-size: 0.7rem;
+  color: var(--text2);
+}
+.tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  padding: 2px 0;
+}
+.tooltip-label {
+  color: var(--text2);
+}
+.tooltip-value {
+  font-family: 'Consolas', 'Courier New', monospace;
+  color: var(--text);
+}
+.tooltip-copy-hint {
+  text-align: center;
+  font-size: 0.65rem;
+  color: var(--accent);
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+.tooltip-interp {
+  font-size: 0.6rem;
+  color: #f0a030;
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* ===== Toast ===== */
+.toast {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--accent);
+  color: #fff;
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s;
+  z-index: 10000;
+  pointer-events: none;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+
+
+/* ===== Hue Number Labels (outer ring) ===== */
+.hue-numbers {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+    
+</style>
+</head>
+<body>
+<div class="main-container">
+  <!-- Neutral Strip -->
+  <div class="neutral-strip" id="neutralStrip">
+    <div class="neutral-strip-title">無彩色 (Neutral)</div>
+  </div>
+
+  <!-- Tone Map -->
+  <div class="tone-map" id="toneMap">
+
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+<div class="toast" id="toast">コピーしました!</div>
+
+<script>
+// ===== Embedded PCCS Data =====
+const PCCS_DATA = {"meta": {"title": "PCCS Color Chart", "description": "Practical Color Co-ordinate System - 12 Tones x 24 Hues + Neutrals", "sources": ["Photo: PCCSカラーチャートII (vivid tone RGB/CMYK verified)", "kenchikushi999.com (even hue RGB/CMYK, Munsell notation)", "co-jin.net (neutral values)"], "notes": "Odd hues for non-vivid tones are interpolated from adjacent even hues. HEX calculated from RGB.", "totalColors": 305}, "tones": ["v", "b", "s", "dp", "lt", "sf", "d", "dk", "p", "ltg", "g", "dkg"], "hues": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24], "hueNames": {"1": "pR", "2": "R", "3": "yR", "4": "rO", "5": "O", "6": "yO", "7": "rY", "8": "Y", "9": "gY", "10": "YG", "11": "yG", "12": "G", "13": "bG", "14": "BG", "15": "BG", "16": "gB", "17": "B", "18": "B", "19": "pB", "20": "V", "21": "bP", "22": "P", "23": "rP", "24": "RP"}, "colors": [{"id": "v1", "tone": "v", "toneInfo": {"name": "vivid", "ja": "ビビッド", "image": "鮮やかな"}, "hue": 1, "hueName": "pR", "rgb": {"r": 182, "g": 30, "b": 85}, "hex": "#B61E55", "cmyk": {"c": 32.2, "m": 96.5, "y": 53.7, "k": 7.5}, "interpolated": false}, {"id": "v2", "tone": "v", "toneInfo": {"name": "vivid", "ja": "ビビッド", "image": "鮮やかな"}, "hue": 2, "hueName": "R", "rgb": {"r": 205, "g": 45, "b": 71}, "hex": "#CD2D47", "cmyk": {"c": 20.0, "m": 93.7, "y": 69.0, "k": 4.3}, "interpolated": false}, {"id": "v3", "tone": "v", "toneInfo": {"name": "vivid", "ja": "ビビッド", "image": "鮮やかな"}, "hue": 3, "hueName": "yR", "rgb": {"r": 217, "g": 66, "b": 58}, "hex": "#D9423A", "cmyk": {"c": 14.1, "m": 89.0, "y": 80.0, "k": 2.8}, "interpolated": false}, {"id": "v4", "tone": "v", "toneInfo": {"name": "vivid", "ja": "ビビッド", "image": "鮮やかな"}, "hue": 4, "hueName": "rO", "rgb": {"r": 230, "g": 89, "b": 34}, "hex": "#E65922", "cmyk": {"c": 7.8, "m": 81.2, "y": 90.6, "k": 0.8}, "interpolated": false}, {"id": "v5", "tone": "v", "toneInfo": {"name": "vivid", "ja": "ビビッド", "image": "鮮やかな"}, "hue": 5, "hueName": "O", "rgb": {"r": 235, "g": 123, "b": 18}, "hex": "#EB7B12", "cmyk": {"c": 6.7, "m": 67.5, "y": 94.1, "k": 0.4}, "interpolated": false}, {"id": "v6", "tone": "v", "toneInfo": {"name": "vivid", "ja": "ビビッド", "image": "鮮やかな"}, "hue": 6, "hueName": "yO", "rgb": {"r": 239, "g": 154, "b": 11}, "hex": "#EF9A0B", "cmyk": {"c": 7.1, "m": 51.8, "y": 94.1, "k": 0.0}, "interpolated": false}, {"id": "v7", "tone": "v", "toneInfo": {"name": "vivid", "ja": "ビビッド", "image": "鮮やかな"}, "hue": 7, "hueName": "rY", "rgb": {"r": 237, "g": 179, "b": 0}, "hex": "#EDB300", "cmyk": {"c": 10.6, "m": 36.5, "y": 94.5, "k": 0.0}, "interpolated": false}, {"id": "v8", "tone": "v", "toneInfo": {"name": "vivid", "ja": "ビビッド", "image": "鮮やかな"}, "hue": 8, "hueName": "Y", "rgb": {"r": 233, "g": 195, "b": 0}, "hex": "#E9C300", "cmyk": {"c": 14.1, "m": 25.5, "y": 94.5, "k": 0.0}, "interpolated": false}, {"id": "v9", "tone": "v", "toneInfo": {"name": "vivid", "ja": "ビビッド", "image": "鮮やかな"}, "hue": 9, "hueName": "gY", "rgb": {"r": 207, "g": 188, "b": 4}, "hex": "#CFBC04", "cmyk": {"c": 27.8, "m": 23.5, "y": 95.7, "k": 0.0}, "interpolated": false}, {"id": "v10", "tone": "v", "toneInfo": {"name": "vivid", "ja": "ビビッド", "image": "鮮やかな"}, "hue": 10, "hueName": "YG", "rgb": {"r": 167, "g": 184, "b": 0}, "hex": "#A7B800", "cmyk": {"c": 47.1, "m": 15.3, "y": 98.0, "k": 0.4}, "interpolated": false}, {"id": "v11", "tone": "v", "toneInfo": {"name": "vivid", "ja": "ビビッド", "image": "鮮やかな"}, "hue": 11, "hueName": "yG", "rgb": {"r": 88, "g": 166, "b": 29}, "hex": "#58A61D", "cmyk": {"c": 73.7, "m": 10.2, "y": 98.8, "k": 0.4}, "interpolated": false}, {"id": "v12", "tone": "v", "toneInfo": {"name": "vivid", "ja": "ビビッド", "image": "鮮やかな"}, "hue": 12, "hueName": "G", "rgb": {"r": 15, "g": 153, "b": 93}, "hex": "#0F995D", "cmyk": {"c": 83.9, "m": 16.5, "y": 80.8, "k": 1.6}, "interpolated": false}, {"id": "v13", "tone": "v", "toneInfo": {"name": "vivid", "ja": "ビビッド", "image": "鮮やかな"}, "hue": 13, "hueName": "bG", "rgb": {"r": 0, "g": 143, "b": 111}, "hex": "#008F6F", "cmyk": {"c": 85.5, "m": 24.7, "y": 69.4, "k": 3.9}, "interpolated": false}, {"id": "v14", "tone": "v", "toneInfo": {"name": "vivid", "ja": "ビビッド", "image": "鮮やかな"}, "hue": 14, "hueName": "BG", "rgb": {"r": 3, "g": 133, "b": 123}, "hex": "#03857B", "cmyk": {"c": 85.9, "m": 33.3, "y": 58.4, "k": 6.7}, "interpolated": false}, {"id": "v15", "tone": "v", "toneInfo": {"name": "vivid", "ja": "ビビッド", "image": "鮮やかな"}, "hue": 15, "hueName": "BG", "rgb": {"r": 1, "g": 124, "b": 138}, "hex": "#017C8A", "cmyk": {"c": 87.1, "m": 42.8, "y": 43.5, "k": 6.3}, "interpolated": false}, {"id": "v16", "tone": "v", "toneInfo": {"name": "vivid", "ja": "ビビッド", "image": "鮮やかな"}, "hue": 16, "hueName": "gB", "rgb": {"r": 6, "g": 115, "b": 143}, "hex": "#06738F", "cmyk": {"c": 87.8, "m": 50.6, "y": 34.1, "k": 5.1}, "interpolated": false}, {"id": "v17", "tone": "v", "toneInfo": {"name": "vivid", "ja": "ビビッド", "image": "鮮やかな"}, "hue": 17, "hueName": "B", "rgb": {"r": 4, "g": 102, "b": 143}, "hex": "#04668F", "cmyk": {"c": 89.8, "m": 60.8, "y": 23.9, "k": 3.5}, "interpolated": false}, {"id": "v18", "tone": "v", "toneInfo": {"name": "vivid", "ja": "ビビッド", "image": "鮮やかな"}, "hue": 18, "hueName": "B", "rgb": {"r": 16, "g": 93, "b": 163}, "hex": "#105DA3", "cmyk": {"c": 90.2, "m": 69.0, "y": 0.0, "k": 0.0}, "interpolated": false}, {"id": "v19", "tone": "v", "toneInfo": {"name": "vivid", "ja": "ビビッド", "image": "鮮やかな"}, "hue": 19, "hueName": "pB", "rgb": {"r": 20, "g": 84, "b": 162}, "hex": "#1454A2", "cmyk": {"c": 90.6, "m": 74.1, "y": 0.0, "k": 0.0}, "interpolated": false}, {"id": "v20", "tone": "v", "toneInfo": {"name": "vivid", "ja": "ビビッド", "image": "鮮やかな"}, "hue": 20, "hueName": "V", "rgb": {"r": 80, "g": 74, "b": 158}, "hex": "#504A9E", "cmyk": {"c": 81.6, "m": 80.8, "y": 0.0, "k": 0.0}, "interpolated": false}, {"id": "v21", "tone": "v", "toneInfo": {"name": "vivid", "ja": "ビビッド", "image": "鮮やかな"}, "hue": 21, "hueName": "bP", "rgb": {"r": 110, "g": 63, "b": 147}, "hex": "#6E3F93", "cmyk": {"c": 72.9, "m": 87.1, "y": 0.0, "k": 0.0}, "interpolated": false}, {"id": "v22", "tone": "v", "toneInfo": {"name": "vivid", "ja": "ビビッド", "image": "鮮やかな"}, "hue": 22, "hueName": "P", "rgb": {"r": 126, "g": 55, "b": 136}, "hex": "#7E3788", "cmyk": {"c": 66.3, "m": 91.4, "y": 1.6, "k": 0.0}, "interpolated": false}, {"id": "v23", "tone": "v", "toneInfo": {"name": "vivid", "ja": "ビビッド", "image": "鮮やかな"}, "hue": 23, "hueName": "rP", "rgb": {"r": 141, "g": 45, "b": 122}, "hex": "#8D2D7A", "cmyk": {"c": 59.2, "m": 94.1, "y": 16.1, "k": 1.2}, "interpolated": false}, {"id": "v24", "tone": "v", "toneInfo": {"name": "vivid", "ja": "ビビッド", "image": "鮮やかな"}, "hue": 24, "hueName": "RP", "rgb": {"r": 170, "g": 45, "b": 106}, "hex": "#AA2D6A", "cmyk": {"c": 42.0, "m": 94.1, "y": 35.7, "k": 3.9}, "interpolated": false}, {"id": "b1", "tone": "b", "toneInfo": {"name": "bright", "ja": "ブライト", "image": "明るい"}, "hue": 1, "hueName": "pR", "rgb": {"r": 220, "g": 103, "b": 124}, "hex": "#DC677C", "cmyk": {"c": 5.5, "m": 73.5, "y": 33.5, "k": 0.0}, "interpolated": true}, {"id": "b2", "tone": "b", "toneInfo": {"name": "bright", "ja": "ブライト", "image": "明るい"}, "hue": 2, "hueName": "R", "rgb": {"r": 235, "g": 105, "b": 110}, "hex": "#EB696E", "cmyk": {"c": 0, "m": 73, "y": 44, "k": 0}, "interpolated": false}, {"id": "b3", "tone": "b", "toneInfo": {"name": "bright", "ja": "ブライト", "image": "明るい"}, "hue": 3, "hueName": "yR", "rgb": {"r": 241, "g": 116, "b": 96}, "hex": "#F17460", "cmyk": {"c": 0.0, "m": 69.0, "y": 53.0, "k": 0.0}, "interpolated": true}, {"id": "b4", "tone": "b", "toneInfo": {"name": "bright", "ja": "ブライト", "image": "明るい"}, "hue": 4, "hueName": "rO", "rgb": {"r": 247, "g": 126, "b": 83}, "hex": "#F77E53", "cmyk": {"c": 0, "m": 65, "y": 62, "k": 0}, "interpolated": false}, {"id": "b5", "tone": "b", "toneInfo": {"name": "bright", "ja": "ブライト", "image": "明るい"}, "hue": 5, "hueName": "O", "rgb": {"r": 250, "g": 148, "b": 68}, "hex": "#FA9444", "cmyk": {"c": 0.0, "m": 55.5, "y": 71.0, "k": 0.0}, "interpolated": true}, {"id": "b6", "tone": "b", "toneInfo": {"name": "bright", "ja": "ブライト", "image": "明るい"}, "hue": 6, "hueName": "yO", "rgb": {"r": 252, "g": 169, "b": 54}, "hex": "#FCA936", "cmyk": {"c": 0, "m": 46, "y": 80, "k": 0}, "interpolated": false}, {"id": "b7", "tone": "b", "toneInfo": {"name": "bright", "ja": "ブライト", "image": "明るい"}, "hue": 7, "hueName": "rY", "rgb": {"r": 250, "g": 190, "b": 52}, "hex": "#FABE34", "cmyk": {"c": 1.5, "m": 33.5, "y": 84.0, "k": 0.0}, "interpolated": true}, {"id": "b8", "tone": "b", "toneInfo": {"name": "bright", "ja": "ブライト", "image": "明るい"}, "hue": 8, "hueName": "Y", "rgb": {"r": 247, "g": 212, "b": 49}, "hex": "#F7D431", "cmyk": {"c": 3, "m": 21, "y": 88, "k": 0}, "interpolated": false}, {"id": "b9", "tone": "b", "toneInfo": {"name": "bright", "ja": "ブライト", "image": "明るい"}, "hue": 9, "hueName": "gY", "rgb": {"r": 214, "g": 204, "b": 46}, "hex": "#D6CC2E", "cmyk": {"c": 21.5, "m": 16.5, "y": 93.5, "k": 0.0}, "interpolated": true}, {"id": "b10", "tone": "b", "toneInfo": {"name": "bright", "ja": "ブライト", "image": "明るい"}, "hue": 10, "hueName": "YG", "rgb": {"r": 182, "g": 197, "b": 43}, "hex": "#B6C52B", "cmyk": {"c": 40, "m": 12, "y": 99, "k": 0}, "interpolated": false}, {"id": "b11", "tone": "b", "toneInfo": {"name": "bright", "ja": "ブライト", "image": "明るい"}, "hue": 11, "hueName": "yG", "rgb": {"r": 124, "g": 190, "b": 81}, "hex": "#7CBE51", "cmyk": {"c": 62.0, "m": 6.0, "y": 85.5, "k": 0.0}, "interpolated": true}, {"id": "b12", "tone": "b", "toneInfo": {"name": "bright", "ja": "ブライト", "image": "明るい"}, "hue": 12, "hueName": "G", "rgb": {"r": 66, "g": 182, "b": 119}, "hex": "#42B677", "cmyk": {"c": 84, "m": 0, "y": 72, "k": 0}, "interpolated": false}, {"id": "b13", "tone": "b", "toneInfo": {"name": "bright", "ja": "ブライト", "image": "明るい"}, "hue": 13, "hueName": "bG", "rgb": {"r": 50, "g": 174, "b": 137}, "hex": "#32AE89", "cmyk": {"c": 88.0, "m": 3.5, "y": 61.5, "k": 0.0}, "interpolated": true}, {"id": "b14", "tone": "b", "toneInfo": {"name": "bright", "ja": "ブライト", "image": "明るい"}, "hue": 14, "hueName": "BG", "rgb": {"r": 35, "g": 165, "b": 155}, "hex": "#23A59B", "cmyk": {"c": 92, "m": 7, "y": 51, "k": 0}, "interpolated": false}, {"id": "b15", "tone": "b", "toneInfo": {"name": "bright", "ja": "ブライト", "image": "明るい"}, "hue": 15, "hueName": "BG", "rgb": {"r": 33, "g": 156, "b": 164}, "hex": "#219CA4", "cmyk": {"c": 92.5, "m": 15.0, "y": 42.0, "k": 0.0}, "interpolated": true}, {"id": "b16", "tone": "b", "toneInfo": {"name": "bright", "ja": "ブライト", "image": "明るい"}, "hue": 16, "hueName": "gB", "rgb": {"r": 31, "g": 148, "b": 174}, "hex": "#1F94AE", "cmyk": {"c": 93, "m": 23, "y": 33, "k": 0}, "interpolated": false}, {"id": "b17", "tone": "b", "toneInfo": {"name": "bright", "ja": "ブライト", "image": "明るい"}, "hue": 17, "hueName": "B", "rgb": {"r": 34, "g": 138, "b": 182}, "hex": "#228AB6", "cmyk": {"c": 92.5, "m": 31.5, "y": 23.0, "k": 0.0}, "interpolated": true}, {"id": "b18", "tone": "b", "toneInfo": {"name": "bright", "ja": "ブライト", "image": "明るい"}, "hue": 18, "hueName": "B", "rgb": {"r": 37, "g": 128, "b": 189}, "hex": "#2580BD", "cmyk": {"c": 92, "m": 40, "y": 13, "k": 0}, "interpolated": false}, {"id": "b19", "tone": "b", "toneInfo": {"name": "bright", "ja": "ブライト", "image": "明るい"}, "hue": 19, "hueName": "pB", "rgb": {"r": 76, "g": 122, "b": 187}, "hex": "#4C7ABB", "cmyk": {"c": 78.5, "m": 48.5, "y": 7.0, "k": 0.0}, "interpolated": true}, {"id": "b20", "tone": "b", "toneInfo": {"name": "bright", "ja": "ブライト", "image": "明るい"}, "hue": 20, "hueName": "V", "rgb": {"r": 114, "g": 115, "b": 185}, "hex": "#7273B9", "cmyk": {"c": 65, "m": 57, "y": 1, "k": 0}, "interpolated": false}, {"id": "b21", "tone": "b", "toneInfo": {"name": "bright", "ja": "ブライト", "image": "明るい"}, "hue": 21, "hueName": "bP", "rgb": {"r": 136, "g": 108, "b": 175}, "hex": "#886CAF", "cmyk": {"c": 52.5, "m": 63.5, "y": 2.5, "k": 0.0}, "interpolated": true}, {"id": "b22", "tone": "b", "toneInfo": {"name": "bright", "ja": "ブライト", "image": "明るい"}, "hue": 22, "hueName": "P", "rgb": {"r": 158, "g": 100, "b": 165}, "hex": "#9E64A5", "cmyk": {"c": 40, "m": 70, "y": 4, "k": 0}, "interpolated": false}, {"id": "b23", "tone": "b", "toneInfo": {"name": "bright", "ja": "ブライト", "image": "明るい"}, "hue": 23, "hueName": "rP", "rgb": {"r": 181, "g": 100, "b": 152}, "hex": "#B56498", "cmyk": {"c": 25.5, "m": 72.0, "y": 13.5, "k": 0.0}, "interpolated": true}, {"id": "b24", "tone": "b", "toneInfo": {"name": "bright", "ja": "ブライト", "image": "明るい"}, "hue": 24, "hueName": "RP", "rgb": {"r": 204, "g": 101, "b": 139}, "hex": "#CC658B", "cmyk": {"c": 11, "m": 74, "y": 23, "k": 0}, "interpolated": false}, {"id": "s1", "tone": "s", "toneInfo": {"name": "strong", "ja": "ストロング", "image": "強い"}, "hue": 1, "hueName": "pR", "rgb": {"r": 177, "g": 60, "b": 90}, "hex": "#B13C5A", "cmyk": {"c": 24.5, "m": 89.5, "y": 52.0, "k": 0.0}, "interpolated": true}, {"id": "s2", "tone": "s", "toneInfo": {"name": "strong", "ja": "ストロング", "image": "強い"}, "hue": 2, "hueName": "R", "rgb": {"r": 194, "g": 61, "b": 75}, "hex": "#C23D4B", "cmyk": {"c": 14, "m": 89, "y": 63, "k": 0}, "interpolated": false}, {"id": "s3", "tone": "s", "toneInfo": {"name": "strong", "ja": "ストロング", "image": "強い"}, "hue": 3, "hueName": "yR", "rgb": {"r": 198, "g": 72, "b": 60}, "hex": "#C6483C", "cmyk": {"c": 12.5, "m": 85.0, "y": 75.5, "k": 0.0}, "interpolated": true}, {"id": "s4", "tone": "s", "toneInfo": {"name": "strong", "ja": "ストロング", "image": "強い"}, "hue": 4, "hueName": "rO", "rgb": {"r": 201, "g": 84, "b": 45}, "hex": "#C9542D", "cmyk": {"c": 11, "m": 81, "y": 88, "k": 0}, "interpolated": false}, {"id": "s5", "tone": "s", "toneInfo": {"name": "strong", "ja": "ストロング", "image": "強い"}, "hue": 5, "hueName": "O", "rgb": {"r": 212, "g": 114, "b": 33}, "hex": "#D47221", "cmyk": {"c": 7.0, "m": 68.0, "y": 92.5, "k": 0.0}, "interpolated": true}, {"id": "s6", "tone": "s", "toneInfo": {"name": "strong", "ja": "ストロング", "image": "強い"}, "hue": 6, "hueName": "yO", "rgb": {"r": 223, "g": 143, "b": 21}, "hex": "#DF8F15", "cmyk": {"c": 3, "m": 55, "y": 97, "k": 0}, "interpolated": false}, {"id": "s7", "tone": "s", "toneInfo": {"name": "strong", "ja": "ストロング", "image": "強い"}, "hue": 7, "hueName": "rY", "rgb": {"r": 222, "g": 164, "b": 14}, "hex": "#DEA40E", "cmyk": {"c": 9.0, "m": 43.0, "y": 98.0, "k": 0.0}, "interpolated": true}, {"id": "s8", "tone": "s", "toneInfo": {"name": "strong", "ja": "ストロング", "image": "強い"}, "hue": 8, "hueName": "Y", "rgb": {"r": 220, "g": 185, "b": 6}, "hex": "#DCB906", "cmyk": {"c": 15, "m": 31, "y": 99, "k": 0}, "interpolated": false}, {"id": "s9", "tone": "s", "toneInfo": {"name": "strong", "ja": "ストロング", "image": "強い"}, "hue": 9, "hueName": "gY", "rgb": {"r": 188, "g": 178, "b": 14}, "hex": "#BCB20E", "cmyk": {"c": 33.0, "m": 27.0, "y": 99.5, "k": 0.0}, "interpolated": true}, {"id": "s10", "tone": "s", "toneInfo": {"name": "strong", "ja": "ストロング", "image": "強い"}, "hue": 10, "hueName": "YG", "rgb": {"r": 155, "g": 170, "b": 23}, "hex": "#9BAA17", "cmyk": {"c": 51, "m": 23, "y": 100, "k": 0}, "interpolated": false}, {"id": "s11", "tone": "s", "toneInfo": {"name": "strong", "ja": "ストロング", "image": "強い"}, "hue": 11, "hueName": "yG", "rgb": {"r": 84, "g": 155, "b": 55}, "hex": "#549B37", "cmyk": {"c": 75.0, "m": 23.0, "y": 94.5, "k": 0.0}, "interpolated": true}, {"id": "s12", "tone": "s", "toneInfo": {"name": "strong", "ja": "ストロング", "image": "強い"}, "hue": 12, "hueName": "G", "rgb": {"r": 14, "g": 140, "b": 87}, "hex": "#0E8C57", "cmyk": {"c": 99, "m": 23, "y": 89, "k": 0}, "interpolated": false}, {"id": "s13", "tone": "s", "toneInfo": {"name": "strong", "ja": "ストロング", "image": "強い"}, "hue": 13, "hueName": "bG", "rgb": {"r": 16, "g": 131, "b": 101}, "hex": "#108365", "cmyk": {"c": 99.5, "m": 31.5, "y": 75.5, "k": 0.5}, "interpolated": true}, {"id": "s14", "tone": "s", "toneInfo": {"name": "strong", "ja": "ストロング", "image": "強い"}, "hue": 14, "hueName": "BG", "rgb": {"r": 17, "g": 122, "b": 115}, "hex": "#117A73", "cmyk": {"c": 100, "m": 40, "y": 62, "k": 1}, "interpolated": false}, {"id": "s15", "tone": "s", "toneInfo": {"name": "strong", "ja": "ストロング", "image": "強い"}, "hue": 15, "hueName": "BG", "rgb": {"r": 21, "g": 116, "b": 125}, "hex": "#15747D", "cmyk": {"c": 99.5, "m": 44.5, "y": 52.5, "k": 1.0}, "interpolated": true}, {"id": "s16", "tone": "s", "toneInfo": {"name": "strong", "ja": "ストロング", "image": "強い"}, "hue": 16, "hueName": "gB", "rgb": {"r": 25, "g": 111, "b": 135}, "hex": "#196F87", "cmyk": {"c": 99, "m": 49, "y": 43, "k": 1}, "interpolated": false}, {"id": "s17", "tone": "s", "toneInfo": {"name": "strong", "ja": "ストロング", "image": "強い"}, "hue": 17, "hueName": "B", "rgb": {"r": 26, "g": 100, "b": 142}, "hex": "#1A648E", "cmyk": {"c": 99.0, "m": 57.5, "y": 33.0, "k": 0.5}, "interpolated": true}, {"id": "s18", "tone": "s", "toneInfo": {"name": "strong", "ja": "ストロング", "image": "強い"}, "hue": 18, "hueName": "B", "rgb": {"r": 26, "g": 90, "b": 148}, "hex": "#1A5A94", "cmyk": {"c": 99, "m": 66, "y": 23, "k": 0}, "interpolated": false}, {"id": "s19", "tone": "s", "toneInfo": {"name": "strong", "ja": "ストロング", "image": "強い"}, "hue": 19, "hueName": "pB", "rgb": {"r": 53, "g": 83, "b": 149}, "hex": "#355395", "cmyk": {"c": 89.5, "m": 72.0, "y": 17.0, "k": 0.0}, "interpolated": true}, {"id": "s20", "tone": "s", "toneInfo": {"name": "strong", "ja": "ストロング", "image": "強い"}, "hue": 20, "hueName": "V", "rgb": {"r": 80, "g": 76, "b": 150}, "hex": "#504C96", "cmyk": {"c": 80, "m": 78, "y": 11, "k": 0}, "interpolated": false}, {"id": "s21", "tone": "s", "toneInfo": {"name": "strong", "ja": "ストロング", "image": "強い"}, "hue": 21, "hueName": "bP", "rgb": {"r": 100, "g": 68, "b": 140}, "hex": "#64448C", "cmyk": {"c": 69.0, "m": 83.5, "y": 15.0, "k": 0.0}, "interpolated": true}, {"id": "s22", "tone": "s", "toneInfo": {"name": "strong", "ja": "ストロング", "image": "強い"}, "hue": 22, "hueName": "P", "rgb": {"r": 121, "g": 60, "b": 130}, "hex": "#793C82", "cmyk": {"c": 58, "m": 89, "y": 19, "k": 0}, "interpolated": false}, {"id": "s23", "tone": "s", "toneInfo": {"name": "strong", "ja": "ストロング", "image": "強い"}, "hue": 23, "hueName": "rP", "rgb": {"r": 140, "g": 59, "b": 117}, "hex": "#8C3B75", "cmyk": {"c": 46.5, "m": 89.5, "y": 30.0, "k": 0.0}, "interpolated": true}, {"id": "s24", "tone": "s", "toneInfo": {"name": "strong", "ja": "ストロング", "image": "強い"}, "hue": 24, "hueName": "RP", "rgb": {"r": 160, "g": 58, "b": 104}, "hex": "#A03A68", "cmyk": {"c": 35, "m": 90, "y": 41, "k": 0}, "interpolated": false}, {"id": "dp1", "tone": "dp", "toneInfo": {"name": "deep", "ja": "ディープ", "image": "濃い"}, "hue": 1, "hueName": "pR", "rgb": {"r": 147, "g": 28, "b": 70}, "hex": "#931C46", "cmyk": {"c": 40.5, "m": 100.0, "y": 66.5, "k": 2.5}, "interpolated": true}, {"id": "dp2", "tone": "dp", "toneInfo": {"name": "deep", "ja": "ディープ", "image": "濃い"}, "hue": 2, "hueName": "R", "rgb": {"r": 163, "g": 28, "b": 56}, "hex": "#A31C38", "cmyk": {"c": 32, "m": 100, "y": 80, "k": 1}, "interpolated": false}, {"id": "dp3", "tone": "dp", "toneInfo": {"name": "deep", "ja": "ディープ", "image": "濃い"}, "hue": 3, "hueName": "yR", "rgb": {"r": 166, "g": 44, "b": 42}, "hex": "#A62C2A", "cmyk": {"c": 31.0, "m": 95.0, "y": 90.0, "k": 1.0}, "interpolated": true}, {"id": "dp4", "tone": "dp", "toneInfo": {"name": "deep", "ja": "ディープ", "image": "濃い"}, "hue": 4, "hueName": "rO", "rgb": {"r": 168, "g": 59, "b": 29}, "hex": "#A83B1D", "cmyk": {"c": 30, "m": 90, "y": 100, "k": 1}, "interpolated": false}, {"id": "dp5", "tone": "dp", "toneInfo": {"name": "deep", "ja": "ディープ", "image": "濃い"}, "hue": 5, "hueName": "O", "rgb": {"r": 173, "g": 83, "b": 16}, "hex": "#AD5310", "cmyk": {"c": 29.0, "m": 78.5, "y": 100.0, "k": 0.5}, "interpolated": true}, {"id": "dp6", "tone": "dp", "toneInfo": {"name": "deep", "ja": "ディープ", "image": "濃い"}, "hue": 6, "hueName": "yO", "rgb": {"r": 178, "g": 107, "b": 3}, "hex": "#B26B03", "cmyk": {"c": 28, "m": 67, "y": 100, "k": 0}, "interpolated": false}, {"id": "dp7", "tone": "dp", "toneInfo": {"name": "deep", "ja": "ディープ", "image": "濃い"}, "hue": 7, "hueName": "rY", "rgb": {"r": 176, "g": 126, "b": 8}, "hex": "#B07E08", "cmyk": {"c": 31.5, "m": 56.0, "y": 100.0, "k": 0.0}, "interpolated": true}, {"id": "dp8", "tone": "dp", "toneInfo": {"name": "deep", "ja": "ディープ", "image": "濃い"}, "hue": 8, "hueName": "Y", "rgb": {"r": 175, "g": 145, "b": 14}, "hex": "#AF910E", "cmyk": {"c": 35, "m": 45, "y": 100, "k": 0}, "interpolated": false}, {"id": "dp9", "tone": "dp", "toneInfo": {"name": "deep", "ja": "ディープ", "image": "濃い"}, "hue": 9, "hueName": "gY", "rgb": {"r": 152, "g": 144, "b": 22}, "hex": "#989016", "cmyk": {"c": 48.0, "m": 40.5, "y": 100.0, "k": 0.0}, "interpolated": true}, {"id": "dp10", "tone": "dp", "toneInfo": {"name": "deep", "ja": "ディープ", "image": "濃い"}, "hue": 10, "hueName": "YG", "rgb": {"r": 128, "g": 143, "b": 29}, "hex": "#808F1D", "cmyk": {"c": 61, "m": 36, "y": 100, "k": 0}, "interpolated": false}, {"id": "dp11", "tone": "dp", "toneInfo": {"name": "deep", "ja": "ディープ", "image": "濃い"}, "hue": 11, "hueName": "yG", "rgb": {"r": 64, "g": 127, "b": 48}, "hex": "#407F30", "cmyk": {"c": 80.5, "m": 40.0, "y": 100.0, "k": 3.0}, "interpolated": true}, {"id": "dp12", "tone": "dp", "toneInfo": {"name": "deep", "ja": "ディープ", "image": "濃い"}, "hue": 12, "hueName": "G", "rgb": {"r": 0, "g": 111, "b": 66}, "hex": "#006F42", "cmyk": {"c": 100, "m": 44, "y": 100, "k": 6}, "interpolated": false}, {"id": "dp13", "tone": "dp", "toneInfo": {"name": "deep", "ja": "ディープ", "image": "濃い"}, "hue": 13, "hueName": "bG", "rgb": {"r": 0, "g": 106, "b": 82}, "hex": "#006A52", "cmyk": {"c": 100.0, "m": 47.5, "y": 83.0, "k": 7.5}, "interpolated": true}, {"id": "dp14", "tone": "dp", "toneInfo": {"name": "deep", "ja": "ディープ", "image": "濃い"}, "hue": 14, "hueName": "BG", "rgb": {"r": 0, "g": 102, "b": 99}, "hex": "#006663", "cmyk": {"c": 100, "m": 51, "y": 66, "k": 9}, "interpolated": false}, {"id": "dp15", "tone": "dp", "toneInfo": {"name": "deep", "ja": "ディープ", "image": "濃い"}, "hue": 15, "hueName": "BG", "rgb": {"r": 0, "g": 92, "b": 100}, "hex": "#005C64", "cmyk": {"c": 100.0, "m": 58.5, "y": 60.0, "k": 10.5}, "interpolated": true}, {"id": "dp16", "tone": "dp", "toneInfo": {"name": "deep", "ja": "ディープ", "image": "濃い"}, "hue": 16, "hueName": "gB", "rgb": {"r": 0, "g": 82, "b": 102}, "hex": "#005266", "cmyk": {"c": 100, "m": 66, "y": 54, "k": 12}, "interpolated": false}, {"id": "dp17", "tone": "dp", "toneInfo": {"name": "deep", "ja": "ディープ", "image": "濃い"}, "hue": 17, "hueName": "B", "rgb": {"r": 0, "g": 70, "b": 106}, "hex": "#00466A", "cmyk": {"c": 100.0, "m": 77.0, "y": 51.0, "k": 9.0}, "interpolated": true}, {"id": "dp18", "tone": "dp", "toneInfo": {"name": "deep", "ja": "ディープ", "image": "濃い"}, "hue": 18, "hueName": "B", "rgb": {"r": 0, "g": 58, "b": 110}, "hex": "#003A6E", "cmyk": {"c": 100, "m": 88, "y": 48, "k": 6}, "interpolated": false}, {"id": "dp19", "tone": "dp", "toneInfo": {"name": "deep", "ja": "ディープ", "image": "濃い"}, "hue": 19, "hueName": "pB", "rgb": {"r": 30, "g": 54, "b": 116}, "hex": "#1E3674", "cmyk": {"c": 95.0, "m": 91.5, "y": 37.0, "k": 3.0}, "interpolated": true}, {"id": "dp20", "tone": "dp", "toneInfo": {"name": "deep", "ja": "ディープ", "image": "濃い"}, "hue": 20, "hueName": "V", "rgb": {"r": 60, "g": 51, "b": 121}, "hex": "#3C3379", "cmyk": {"c": 90, "m": 95, "y": 26, "k": 0}, "interpolated": false}, {"id": "dp21", "tone": "dp", "toneInfo": {"name": "deep", "ja": "ディープ", "image": "濃い"}, "hue": 21, "hueName": "bP", "rgb": {"r": 78, "g": 44, "b": 112}, "hex": "#4E2C70", "cmyk": {"c": 80.5, "m": 97.5, "y": 31.5, "k": 1.0}, "interpolated": true}, {"id": "dp22", "tone": "dp", "toneInfo": {"name": "deep", "ja": "ディープ", "image": "濃い"}, "hue": 22, "hueName": "P", "rgb": {"r": 95, "g": 36, "b": 103}, "hex": "#5F2467", "cmyk": {"c": 71, "m": 100, "y": 37, "k": 2}, "interpolated": false}, {"id": "dp23", "tone": "dp", "toneInfo": {"name": "deep", "ja": "ディープ", "image": "濃い"}, "hue": 23, "hueName": "rP", "rgb": {"r": 113, "g": 32, "b": 93}, "hex": "#71205D", "cmyk": {"c": 60.0, "m": 100.0, "y": 45.0, "k": 3.0}, "interpolated": true}, {"id": "dp24", "tone": "dp", "toneInfo": {"name": "deep", "ja": "ディープ", "image": "濃い"}, "hue": 24, "hueName": "RP", "rgb": {"r": 131, "g": 28, "b": 83}, "hex": "#831C53", "cmyk": {"c": 49, "m": 100, "y": 53, "k": 4}, "interpolated": false}, {"id": "lt1", "tone": "lt", "toneInfo": {"name": "light", "ja": "ライト", "image": "浅い"}, "hue": 1, "hueName": "pR", "rgb": {"r": 229, "g": 162, "b": 170}, "hex": "#E5A2AA", "cmyk": {"c": 4.5, "m": 48.0, "y": 21.0, "k": 0.0}, "interpolated": true}, {"id": "lt2", "tone": "lt", "toneInfo": {"name": "light", "ja": "ライト", "image": "浅い"}, "hue": 2, "hueName": "R", "rgb": {"r": 242, "g": 168, "b": 165}, "hex": "#F2A8A5", "cmyk": {"c": 0, "m": 47, "y": 25, "k": 0}, "interpolated": false}, {"id": "lt3", "tone": "lt", "toneInfo": {"name": "light", "ja": "ライト", "image": "浅い"}, "hue": 3, "hueName": "yR", "rgb": {"r": 248, "g": 176, "b": 162}, "hex": "#F8B0A2", "cmyk": {"c": 0.0, "m": 44.0, "y": 28.0, "k": 0.0}, "interpolated": true}, {"id": "lt4", "tone": "lt", "toneInfo": {"name": "light", "ja": "ライト", "image": "浅い"}, "hue": 4, "hueName": "rO", "rgb": {"r": 253, "g": 183, "b": 160}, "hex": "#FDB7A0", "cmyk": {"c": 0, "m": 41, "y": 31, "k": 0}, "interpolated": false}, {"id": "lt5", "tone": "lt", "toneInfo": {"name": "light", "ja": "ライト", "image": "浅い"}, "hue": 5, "hueName": "O", "rgb": {"r": 254, "g": 194, "b": 156}, "hex": "#FEC29C", "cmyk": {"c": 0.0, "m": 35.0, "y": 36.0, "k": 0.0}, "interpolated": true}, {"id": "lt6", "tone": "lt", "toneInfo": {"name": "light", "ja": "ライト", "image": "浅い"}, "hue": 6, "hueName": "yO", "rgb": {"r": 254, "g": 205, "b": 152}, "hex": "#FECD98", "cmyk": {"c": 0, "m": 29, "y": 41, "k": 0}, "interpolated": false}, {"id": "lt7", "tone": "lt", "toneInfo": {"name": "light", "ja": "ライト", "image": "浅い"}, "hue": 7, "hueName": "rY", "rgb": {"r": 251, "g": 216, "b": 146}, "hex": "#FBD892", "cmyk": {"c": 1.5, "m": 21.5, "y": 47.0, "k": 0.0}, "interpolated": true}, {"id": "lt8", "tone": "lt", "toneInfo": {"name": "light", "ja": "ライト", "image": "浅い"}, "hue": 8, "hueName": "Y", "rgb": {"r": 248, "g": 227, "b": 141}, "hex": "#F8E38D", "cmyk": {"c": 3, "m": 14, "y": 53, "k": 0}, "interpolated": false}, {"id": "lt9", "tone": "lt", "toneInfo": {"name": "light", "ja": "ライト", "image": "浅い"}, "hue": 9, "hueName": "gY", "rgb": {"r": 230, "g": 224, "b": 140}, "hex": "#E6E08C", "cmyk": {"c": 14.0, "m": 11.0, "y": 55.0, "k": 0.0}, "interpolated": true}, {"id": "lt10", "tone": "lt", "toneInfo": {"name": "light", "ja": "ライト", "image": "浅い"}, "hue": 10, "hueName": "YG", "rgb": {"r": 212, "g": 220, "b": 139}, "hex": "#D4DC8B", "cmyk": {"c": 25, "m": 8, "y": 57, "k": 0}, "interpolated": false}, {"id": "lt11", "tone": "lt", "toneInfo": {"name": "light", "ja": "ライト", "image": "浅い"}, "hue": 11, "hueName": "yG", "rgb": {"r": 182, "g": 217, "b": 156}, "hex": "#B6D99C", "cmyk": {"c": 39.5, "m": 4.0, "y": 51.0, "k": 0.0}, "interpolated": true}, {"id": "lt12", "tone": "lt", "toneInfo": {"name": "light", "ja": "ライト", "image": "浅い"}, "hue": 12, "hueName": "G", "rgb": {"r": 153, "g": 214, "b": 172}, "hex": "#99D6AC", "cmyk": {"c": 54, "m": 0, "y": 45, "k": 0}, "interpolated": false}, {"id": "lt13", "tone": "lt", "toneInfo": {"name": "light", "ja": "ライト", "image": "浅い"}, "hue": 13, "hueName": "bG", "rgb": {"r": 139, "g": 208, "b": 182}, "hex": "#8BD0B6", "cmyk": {"c": 59.5, "m": 0.0, "y": 40.5, "k": 0.0}, "interpolated": true}, {"id": "lt14", "tone": "lt", "toneInfo": {"name": "light", "ja": "ライト", "image": "浅い"}, "hue": 14, "hueName": "BG", "rgb": {"r": 125, "g": 202, "b": 191}, "hex": "#7DCABF", "cmyk": {"c": 65, "m": 0, "y": 36, "k": 0}, "interpolated": false}, {"id": "lt15", "tone": "lt", "toneInfo": {"name": "light", "ja": "ライト", "image": "浅い"}, "hue": 15, "hueName": "BG", "rgb": {"r": 122, "g": 193, "b": 196}, "hex": "#7AC1C4", "cmyk": {"c": 65.5, "m": 5.0, "y": 30.5, "k": 0.0}, "interpolated": true}, {"id": "lt16", "tone": "lt", "toneInfo": {"name": "light", "ja": "ライト", "image": "浅い"}, "hue": 16, "hueName": "gB", "rgb": {"r": 119, "g": 184, "b": 200}, "hex": "#77B8C8", "cmyk": {"c": 66, "m": 10, "y": 25, "k": 0}, "interpolated": false}, {"id": "lt17", "tone": "lt", "toneInfo": {"name": "light", "ja": "ライト", "image": "浅い"}, "hue": 17, "hueName": "B", "rgb": {"r": 124, "g": 174, "b": 198}, "hex": "#7CAEC6", "cmyk": {"c": 63.0, "m": 18.5, "y": 21.0, "k": 0.0}, "interpolated": true}, {"id": "lt18", "tone": "lt", "toneInfo": {"name": "light", "ja": "ライト", "image": "浅い"}, "hue": 18, "hueName": "B", "rgb": {"r": 130, "g": 165, "b": 197}, "hex": "#82A5C5", "cmyk": {"c": 60, "m": 27, "y": 17, "k": 0}, "interpolated": false}, {"id": "lt19", "tone": "lt", "toneInfo": {"name": "light", "ja": "ライト", "image": "浅い"}, "hue": 19, "hueName": "pB", "rgb": {"r": 143, "g": 162, "b": 197}, "hex": "#8FA2C5", "cmyk": {"c": 52.5, "m": 32.0, "y": 13.0, "k": 0.0}, "interpolated": true}, {"id": "lt20", "tone": "lt", "toneInfo": {"name": "light", "ja": "ライト", "image": "浅い"}, "hue": 20, "hueName": "V", "rgb": {"r": 156, "g": 158, "b": 197}, "hex": "#9C9EC5", "cmyk": {"c": 45, "m": 37, "y": 9, "k": 0}, "interpolated": false}, {"id": "lt21", "tone": "lt", "toneInfo": {"name": "light", "ja": "ライト", "image": "浅い"}, "hue": 21, "hueName": "bP", "rgb": {"r": 168, "g": 154, "b": 191}, "hex": "#A89ABF", "cmyk": {"c": 37.5, "m": 41.5, "y": 10.0, "k": 0.0}, "interpolated": true}, {"id": "lt22", "tone": "lt", "toneInfo": {"name": "light", "ja": "ライト", "image": "浅い"}, "hue": 22, "hueName": "P", "rgb": {"r": 181, "g": 151, "b": 185}, "hex": "#B597B9", "cmyk": {"c": 30, "m": 46, "y": 11, "k": 0}, "interpolated": false}, {"id": "lt23", "tone": "lt", "toneInfo": {"name": "light", "ja": "ライト", "image": "浅い"}, "hue": 23, "hueName": "rP", "rgb": {"r": 198, "g": 154, "b": 180}, "hex": "#C69AB4", "cmyk": {"c": 19.5, "m": 47.5, "y": 14.0, "k": 0.0}, "interpolated": true}, {"id": "lt24", "tone": "lt", "toneInfo": {"name": "light", "ja": "ライト", "image": "浅い"}, "hue": 24, "hueName": "RP", "rgb": {"r": 216, "g": 157, "b": 174}, "hex": "#D89DAE", "cmyk": {"c": 9, "m": 49, "y": 17, "k": 0}, "interpolated": false}, {"id": "sf1", "tone": "sf", "toneInfo": {"name": "soft", "ja": "ソフト", "image": "柔らかい"}, "hue": 1, "hueName": "pR", "rgb": {"r": 188, "g": 123, "b": 132}, "hex": "#BC7B84", "cmyk": {"c": 22.5, "m": 62.0, "y": 36.0, "k": 0.0}, "interpolated": true}, {"id": "sf2", "tone": "sf", "toneInfo": {"name": "soft", "ja": "ソフト", "image": "柔らかい"}, "hue": 2, "hueName": "R", "rgb": {"r": 199, "g": 128, "b": 127}, "hex": "#C7807F", "cmyk": {"c": 16, "m": 61, "y": 40, "k": 0}, "interpolated": false}, {"id": "sf3", "tone": "sf", "toneInfo": {"name": "soft", "ja": "ソフト", "image": "柔らかい"}, "hue": 3, "hueName": "yR", "rgb": {"r": 207, "g": 136, "b": 124}, "hex": "#CF887C", "cmyk": {"c": 12.0, "m": 58.0, "y": 44.0, "k": 0.0}, "interpolated": true}, {"id": "sf4", "tone": "sf", "toneInfo": {"name": "soft", "ja": "ソフト", "image": "柔らかい"}, "hue": 4, "hueName": "rO", "rgb": {"r": 215, "g": 143, "b": 120}, "hex": "#D78F78", "cmyk": {"c": 8, "m": 55, "y": 48, "k": 0}, "interpolated": false}, {"id": "sf5", "tone": "sf", "toneInfo": {"name": "soft", "ja": "ソフト", "image": "柔らかい"}, "hue": 5, "hueName": "O", "rgb": {"r": 216, "g": 153, "b": 112}, "hex": "#D89970", "cmyk": {"c": 9.5, "m": 49.5, "y": 55.0, "k": 0.0}, "interpolated": true}, {"id": "sf6", "tone": "sf", "toneInfo": {"name": "soft", "ja": "ソフト", "image": "柔らかい"}, "hue": 6, "hueName": "yO", "rgb": {"r": 216, "g": 163, "b": 105}, "hex": "#D8A369", "cmyk": {"c": 11, "m": 44, "y": 62, "k": 0}, "interpolated": false}, {"id": "sf7", "tone": "sf", "toneInfo": {"name": "soft", "ja": "ソフト", "image": "柔らかい"}, "hue": 7, "hueName": "rY", "rgb": {"r": 212, "g": 174, "b": 106}, "hex": "#D4AE6A", "cmyk": {"c": 16.0, "m": 36.0, "y": 64.5, "k": 0.0}, "interpolated": true}, {"id": "sf8", "tone": "sf", "toneInfo": {"name": "soft", "ja": "ソフト", "image": "柔らかい"}, "hue": 8, "hueName": "Y", "rgb": {"r": 208, "g": 186, "b": 106}, "hex": "#D0BA6A", "cmyk": {"c": 21, "m": 28, "y": 67, "k": 0}, "interpolated": false}, {"id": "sf9", "tone": "sf", "toneInfo": {"name": "soft", "ja": "ソフト", "image": "柔らかい"}, "hue": 9, "hueName": "gY", "rgb": {"r": 190, "g": 182, "b": 106}, "hex": "#BEB66A", "cmyk": {"c": 31.5, "m": 25.5, "y": 68.5, "k": 0.0}, "interpolated": true}, {"id": "sf10", "tone": "sf", "toneInfo": {"name": "soft", "ja": "ソフト", "image": "柔らかい"}, "hue": 10, "hueName": "YG", "rgb": {"r": 171, "g": 179, "b": 105}, "hex": "#ABB369", "cmyk": {"c": 42, "m": 23, "y": 70, "k": 0}, "interpolated": false}, {"id": "sf11", "tone": "sf", "toneInfo": {"name": "soft", "ja": "ソフト", "image": "柔らかい"}, "hue": 11, "hueName": "yG", "rgb": {"r": 144, "g": 176, "b": 121}, "hex": "#90B079", "cmyk": {"c": 55.5, "m": 17.5, "y": 63.5, "k": 0.0}, "interpolated": true}, {"id": "sf12", "tone": "sf", "toneInfo": {"name": "soft", "ja": "ソフト", "image": "柔らかい"}, "hue": 12, "hueName": "G", "rgb": {"r": 116, "g": 174, "b": 137}, "hex": "#74AE89", "cmyk": {"c": 69, "m": 12, "y": 57, "k": 0}, "interpolated": false}, {"id": "sf13", "tone": "sf", "toneInfo": {"name": "soft", "ja": "ソフト", "image": "柔らかい"}, "hue": 13, "hueName": "bG", "rgb": {"r": 100, "g": 178, "b": 145}, "hex": "#64B291", "cmyk": {"c": 74.5, "m": 6.0, "y": 55.0, "k": 0.0}, "interpolated": true}, {"id": "sf14", "tone": "sf", "toneInfo": {"name": "soft", "ja": "ソフト", "image": "柔らかい"}, "hue": 14, "hueName": "BG", "rgb": {"r": 83, "g": 181, "b": 153}, "hex": "#53B599", "cmyk": {"c": 80, "m": 0, "y": 53, "k": 0}, "interpolated": false}, {"id": "sf15", "tone": "sf", "toneInfo": {"name": "soft", "ja": "ソフト", "image": "柔らかい"}, "hue": 15, "hueName": "BG", "rgb": {"r": 82, "g": 163, "b": 158}, "hex": "#52A39E", "cmyk": {"c": 80.0, "m": 15.0, "y": 44.5, "k": 0.0}, "interpolated": true}, {"id": "sf16", "tone": "sf", "toneInfo": {"name": "soft", "ja": "ソフト", "image": "柔らかい"}, "hue": 16, "hueName": "gB", "rgb": {"r": 80, "g": 145, "b": 162}, "hex": "#5091A2", "cmyk": {"c": 80, "m": 30, "y": 36, "k": 0}, "interpolated": false}, {"id": "sf17", "tone": "sf", "toneInfo": {"name": "soft", "ja": "ソフト", "image": "柔らかい"}, "hue": 17, "hueName": "B", "rgb": {"r": 86, "g": 135, "b": 160}, "hex": "#5687A0", "cmyk": {"c": 78.0, "m": 38.0, "y": 32.5, "k": 0.0}, "interpolated": true}, {"id": "sf18", "tone": "sf", "toneInfo": {"name": "soft", "ja": "ソフト", "image": "柔らかい"}, "hue": 18, "hueName": "B", "rgb": {"r": 91, "g": 125, "b": 158}, "hex": "#5B7D9E", "cmyk": {"c": 76, "m": 46, "y": 29, "k": 0}, "interpolated": false}, {"id": "sf19", "tone": "sf", "toneInfo": {"name": "soft", "ja": "ソフト", "image": "柔らかい"}, "hue": 19, "hueName": "pB", "rgb": {"r": 104, "g": 122, "b": 158}, "hex": "#687A9E", "cmyk": {"c": 69.5, "m": 50.5, "y": 26.0, "k": 0.0}, "interpolated": true}, {"id": "sf20", "tone": "sf", "toneInfo": {"name": "soft", "ja": "ソフト", "image": "柔らかい"}, "hue": 20, "hueName": "V", "rgb": {"r": 117, "g": 118, "b": 157}, "hex": "#75769D", "cmyk": {"c": 63, "m": 55, "y": 23, "k": 0}, "interpolated": false}, {"id": "sf21", "tone": "sf", "toneInfo": {"name": "soft", "ja": "ソフト", "image": "柔らかい"}, "hue": 21, "hueName": "bP", "rgb": {"r": 130, "g": 114, "b": 152}, "hex": "#827298", "cmyk": {"c": 56.0, "m": 59.0, "y": 24.0, "k": 0.0}, "interpolated": true}, {"id": "sf22", "tone": "sf", "toneInfo": {"name": "soft", "ja": "ソフト", "image": "柔らかい"}, "hue": 22, "hueName": "P", "rgb": {"r": 142, "g": 111, "b": 146}, "hex": "#8E6F92", "cmyk": {"c": 49, "m": 63, "y": 25, "k": 0}, "interpolated": false}, {"id": "sf23", "tone": "sf", "toneInfo": {"name": "soft", "ja": "ソフト", "image": "柔らかい"}, "hue": 23, "hueName": "rP", "rgb": {"r": 160, "g": 114, "b": 142}, "hex": "#A0728E", "cmyk": {"c": 39.0, "m": 63.0, "y": 28.5, "k": 0.0}, "interpolated": true}, {"id": "sf24", "tone": "sf", "toneInfo": {"name": "soft", "ja": "ソフト", "image": "柔らかい"}, "hue": 24, "hueName": "RP", "rgb": {"r": 177, "g": 118, "b": 137}, "hex": "#B17689", "cmyk": {"c": 29, "m": 63, "y": 32, "k": 0}, "interpolated": false}, {"id": "d1", "tone": "d", "toneInfo": {"name": "dull", "ja": "ダル", "image": "鈍い"}, "hue": 1, "hueName": "pR", "rgb": {"r": 159, "g": 84, "b": 95}, "hex": "#9F545F", "cmyk": {"c": 36.5, "m": 79.5, "y": 54.0, "k": 0.5}, "interpolated": true}, {"id": "d2", "tone": "d", "toneInfo": {"name": "dull", "ja": "ダル", "image": "鈍い"}, "hue": 2, "hueName": "R", "rgb": {"r": 181, "g": 89, "b": 90}, "hex": "#B5595A", "cmyk": {"c": 24, "m": 78, "y": 58, "k": 0}, "interpolated": false}, {"id": "d3", "tone": "d", "toneInfo": {"name": "dull", "ja": "ダル", "image": "鈍い"}, "hue": 3, "hueName": "yR", "rgb": {"r": 177, "g": 96, "b": 86}, "hex": "#B16056", "cmyk": {"c": 27.0, "m": 74.0, "y": 63.0, "k": 0.0}, "interpolated": true}, {"id": "d4", "tone": "d", "toneInfo": {"name": "dull", "ja": "ダル", "image": "鈍い"}, "hue": 4, "hueName": "rO", "rgb": {"r": 173, "g": 103, "b": 82}, "hex": "#AD6752", "cmyk": {"c": 30, "m": 70, "y": 68, "k": 0}, "interpolated": false}, {"id": "d5", "tone": "d", "toneInfo": {"name": "dull", "ja": "ダル", "image": "鈍い"}, "hue": 5, "hueName": "O", "rgb": {"r": 175, "g": 114, "b": 76}, "hex": "#AF724C", "cmyk": {"c": 30.0, "m": 64.5, "y": 74.5, "k": 0.0}, "interpolated": true}, {"id": "d6", "tone": "d", "toneInfo": {"name": "dull", "ja": "ダル", "image": "鈍い"}, "hue": 6, "hueName": "yO", "rgb": {"r": 177, "g": 124, "b": 69}, "hex": "#B17C45", "cmyk": {"c": 30, "m": 59, "y": 81, "k": 0}, "interpolated": false}, {"id": "d7", "tone": "d", "toneInfo": {"name": "dull", "ja": "ダル", "image": "鈍い"}, "hue": 7, "hueName": "rY", "rgb": {"r": 173, "g": 135, "b": 69}, "hex": "#AD8745", "cmyk": {"c": 34.0, "m": 51.5, "y": 83.0, "k": 0.0}, "interpolated": true}, {"id": "d8", "tone": "d", "toneInfo": {"name": "dull", "ja": "ダル", "image": "鈍い"}, "hue": 8, "hueName": "Y", "rgb": {"r": 169, "g": 146, "b": 69}, "hex": "#A99245", "cmyk": {"c": 38, "m": 44, "y": 85, "k": 0}, "interpolated": false}, {"id": "d9", "tone": "d", "toneInfo": {"name": "dull", "ja": "ダル", "image": "鈍い"}, "hue": 9, "hueName": "gY", "rgb": {"r": 150, "g": 144, "b": 69}, "hex": "#969045", "cmyk": {"c": 48.0, "m": 41.5, "y": 87.5, "k": 0.0}, "interpolated": true}, {"id": "d10", "tone": "d", "toneInfo": {"name": "dull", "ja": "ダル", "image": "鈍い"}, "hue": 10, "hueName": "YG", "rgb": {"r": 132, "g": 141, "b": 69}, "hex": "#848D45", "cmyk": {"c": 58, "m": 39, "y": 90, "k": 0}, "interpolated": false}, {"id": "d11", "tone": "d", "toneInfo": {"name": "dull", "ja": "ダル", "image": "鈍い"}, "hue": 11, "hueName": "yG", "rgb": {"r": 106, "g": 137, "b": 84}, "hex": "#6A8954", "cmyk": {"c": 70.0, "m": 37.5, "y": 81.5, "k": 0.0}, "interpolated": true}, {"id": "d12", "tone": "d", "toneInfo": {"name": "dull", "ja": "ダル", "image": "鈍い"}, "hue": 12, "hueName": "G", "rgb": {"r": 79, "g": 133, "b": 100}, "hex": "#4F8564", "cmyk": {"c": 82, "m": 36, "y": 73, "k": 0}, "interpolated": false}, {"id": "d13", "tone": "d", "toneInfo": {"name": "dull", "ja": "ダル", "image": "鈍い"}, "hue": 13, "hueName": "bG", "rgb": {"r": 60, "g": 128, "b": 108}, "hex": "#3C806C", "cmyk": {"c": 88.5, "m": 38.5, "y": 66.5, "k": 0.5}, "interpolated": true}, {"id": "d14", "tone": "d", "toneInfo": {"name": "dull", "ja": "ダル", "image": "鈍い"}, "hue": 14, "hueName": "BG", "rgb": {"r": 42, "g": 122, "b": 117}, "hex": "#2A7A75", "cmyk": {"c": 95, "m": 41, "y": 60, "k": 1}, "interpolated": false}, {"id": "d15", "tone": "d", "toneInfo": {"name": "dull", "ja": "ダル", "image": "鈍い"}, "hue": 15, "hueName": "BG", "rgb": {"r": 38, "g": 114, "b": 120}, "hex": "#267278", "cmyk": {"c": 96.0, "m": 47.0, "y": 54.5, "k": 1.5}, "interpolated": true}, {"id": "d16", "tone": "d", "toneInfo": {"name": "dull", "ja": "ダル", "image": "鈍い"}, "hue": 16, "hueName": "gB", "rgb": {"r": 35, "g": 105, "b": 123}, "hex": "#23697B", "cmyk": {"c": 97, "m": 53, "y": 49, "k": 2}, "interpolated": false}, {"id": "d17", "tone": "d", "toneInfo": {"name": "dull", "ja": "ダル", "image": "鈍い"}, "hue": 17, "hueName": "B", "rgb": {"r": 42, "g": 96, "b": 123}, "hex": "#2A607B", "cmyk": {"c": 95.0, "m": 60.0, "y": 44.5, "k": 2.0}, "interpolated": true}, {"id": "d18", "tone": "d", "toneInfo": {"name": "dull", "ja": "ダル", "image": "鈍い"}, "hue": 18, "hueName": "B", "rgb": {"r": 50, "g": 88, "b": 123}, "hex": "#32587B", "cmyk": {"c": 93, "m": 67, "y": 40, "k": 2}, "interpolated": false}, {"id": "d19", "tone": "d", "toneInfo": {"name": "dull", "ja": "ダル", "image": "鈍い"}, "hue": 19, "hueName": "pB", "rgb": {"r": 66, "g": 84, "b": 122}, "hex": "#42547A", "cmyk": {"c": 86.0, "m": 71.0, "y": 38.0, "k": 1.5}, "interpolated": true}, {"id": "d20", "tone": "d", "toneInfo": {"name": "dull", "ja": "ダル", "image": "鈍い"}, "hue": 20, "hueName": "V", "rgb": {"r": 82, "g": 81, "b": 122}, "hex": "#52517A", "cmyk": {"c": 79, "m": 75, "y": 36, "k": 1}, "interpolated": false}, {"id": "d21", "tone": "d", "toneInfo": {"name": "dull", "ja": "ダル", "image": "鈍い"}, "hue": 21, "hueName": "bP", "rgb": {"r": 94, "g": 77, "b": 116}, "hex": "#5E4D74", "cmyk": {"c": 72.5, "m": 78.5, "y": 38.0, "k": 1.5}, "interpolated": true}, {"id": "d22", "tone": "d", "toneInfo": {"name": "dull", "ja": "ダル", "image": "鈍い"}, "hue": 22, "hueName": "P", "rgb": {"r": 106, "g": 73, "b": 111}, "hex": "#6A496F", "cmyk": {"c": 66, "m": 82, "y": 40, "k": 2}, "interpolated": false}, {"id": "d23", "tone": "d", "toneInfo": {"name": "dull", "ja": "ダル", "image": "鈍い"}, "hue": 23, "hueName": "rP", "rgb": {"r": 122, "g": 76, "b": 106}, "hex": "#7A4C6A", "cmyk": {"c": 57.5, "m": 81.5, "y": 45.0, "k": 1.5}, "interpolated": true}, {"id": "d24", "tone": "d", "toneInfo": {"name": "dull", "ja": "ダル", "image": "鈍い"}, "hue": 24, "hueName": "RP", "rgb": {"r": 137, "g": 78, "b": 100}, "hex": "#894E64", "cmyk": {"c": 49, "m": 81, "y": 50, "k": 1}, "interpolated": false}, {"id": "dk1", "tone": "dk", "toneInfo": {"name": "dark", "ja": "ダーク", "image": "暗い"}, "hue": 1, "hueName": "pR", "rgb": {"r": 99, "g": 42, "b": 60}, "hex": "#632A3C", "cmyk": {"c": 56.5, "m": 94.0, "y": 69.5, "k": 26.0}, "interpolated": true}, {"id": "dk2", "tone": "dk", "toneInfo": {"name": "dark", "ja": "ダーク", "image": "暗い"}, "hue": 2, "hueName": "R", "rgb": {"r": 103, "g": 40, "b": 51}, "hex": "#672833", "cmyk": {"c": 52, "m": 95, "y": 78, "k": 28}, "interpolated": false}, {"id": "dk3", "tone": "dk", "toneInfo": {"name": "dark", "ja": "ダーク", "image": "暗い"}, "hue": 3, "hueName": "yR", "rgb": {"r": 109, "g": 46, "b": 46}, "hex": "#6D2E2E", "cmyk": {"c": 50.5, "m": 92.5, "y": 87.0, "k": 25.5}, "interpolated": true}, {"id": "dk4", "tone": "dk", "toneInfo": {"name": "dark", "ja": "ダーク", "image": "暗い"}, "hue": 4, "hueName": "rO", "rgb": {"r": 115, "g": 52, "b": 41}, "hex": "#733429", "cmyk": {"c": 49, "m": 90, "y": 96, "k": 23}, "interpolated": false}, {"id": "dk5", "tone": "dk", "toneInfo": {"name": "dark", "ja": "ダーク", "image": "暗い"}, "hue": 5, "hueName": "O", "rgb": {"r": 117, "g": 64, "b": 34}, "hex": "#754022", "cmyk": {"c": 50.0, "m": 82.5, "y": 98.0, "k": 21.0}, "interpolated": true}, {"id": "dk6", "tone": "dk", "toneInfo": {"name": "dark", "ja": "ダーク", "image": "暗い"}, "hue": 6, "hueName": "yO", "rgb": {"r": 119, "g": 75, "b": 28}, "hex": "#774B1C", "cmyk": {"c": 51, "m": 75, "y": 100, "k": 19}, "interpolated": false}, {"id": "dk7", "tone": "dk", "toneInfo": {"name": "dark", "ja": "ダーク", "image": "暗い"}, "hue": 7, "hueName": "rY", "rgb": {"r": 116, "g": 84, "b": 29}, "hex": "#74541D", "cmyk": {"c": 54.0, "m": 68.5, "y": 100.0, "k": 17.5}, "interpolated": true}, {"id": "dk8", "tone": "dk", "toneInfo": {"name": "dark", "ja": "ダーク", "image": "暗い"}, "hue": 8, "hueName": "Y", "rgb": {"r": 114, "g": 94, "b": 30}, "hex": "#725E1E", "cmyk": {"c": 57, "m": 62, "y": 100, "k": 16}, "interpolated": false}, {"id": "dk9", "tone": "dk", "toneInfo": {"name": "dark", "ja": "ダーク", "image": "暗い"}, "hue": 9, "hueName": "gY", "rgb": {"r": 98, "g": 92, "b": 30}, "hex": "#625C1E", "cmyk": {"c": 65.5, "m": 59.5, "y": 100.0, "k": 20.0}, "interpolated": true}, {"id": "dk10", "tone": "dk", "toneInfo": {"name": "dark", "ja": "ダーク", "image": "暗い"}, "hue": 10, "hueName": "YG", "rgb": {"r": 81, "g": 90, "b": 31}, "hex": "#515A1F", "cmyk": {"c": 74, "m": 57, "y": 100, "k": 24}, "interpolated": false}, {"id": "dk11", "tone": "dk", "toneInfo": {"name": "dark", "ja": "ダーク", "image": "暗い"}, "hue": 11, "hueName": "yG", "rgb": {"r": 58, "g": 86, "b": 44}, "hex": "#3A562C", "cmyk": {"c": 85.5, "m": 56.5, "y": 96.0, "k": 27.0}, "interpolated": true}, {"id": "dk12", "tone": "dk", "toneInfo": {"name": "dark", "ja": "ダーク", "image": "暗い"}, "hue": 12, "hueName": "G", "rgb": {"r": 34, "g": 81, "b": 57}, "hex": "#225139", "cmyk": {"c": 97, "m": 56, "y": 92, "k": 30}, "interpolated": false}, {"id": "dk13", "tone": "dk", "toneInfo": {"name": "dark", "ja": "ダーク", "image": "暗い"}, "hue": 13, "hueName": "bG", "rgb": {"r": 20, "g": 75, "b": 62}, "hex": "#144B3E", "cmyk": {"c": 98.5, "m": 60.0, "y": 82.0, "k": 32.0}, "interpolated": true}, {"id": "dk14", "tone": "dk", "toneInfo": {"name": "dark", "ja": "ダーク", "image": "暗い"}, "hue": 14, "hueName": "BG", "rgb": {"r": 7, "g": 69, "b": 68}, "hex": "#074544", "cmyk": {"c": 100, "m": 64, "y": 72, "k": 34}, "interpolated": false}, {"id": "dk15", "tone": "dk", "toneInfo": {"name": "dark", "ja": "ダーク", "image": "暗い"}, "hue": 15, "hueName": "BG", "rgb": {"r": 4, "g": 69, "b": 78}, "hex": "#04454E", "cmyk": {"c": 100.0, "m": 62.5, "y": 78.5, "k": 37.0}, "interpolated": true}, {"id": "dk16", "tone": "dk", "toneInfo": {"name": "dark", "ja": "ダーク", "image": "暗い"}, "hue": 16, "hueName": "gB", "rgb": {"r": 0, "g": 69, "b": 88}, "hex": "#004558", "cmyk": {"c": 100, "m": 61, "y": 85, "k": 40}, "interpolated": false}, {"id": "dk17", "tone": "dk", "toneInfo": {"name": "dark", "ja": "ダーク", "image": "暗い"}, "hue": 17, "hueName": "B", "rgb": {"r": 8, "g": 60, "b": 84}, "hex": "#083C54", "cmyk": {"c": 100.0, "m": 74.0, "y": 71.0, "k": 33.0}, "interpolated": true}, {"id": "dk18", "tone": "dk", "toneInfo": {"name": "dark", "ja": "ダーク", "image": "暗い"}, "hue": 18, "hueName": "B", "rgb": {"r": 16, "g": 51, "b": 81}, "hex": "#103351", "cmyk": {"c": 100, "m": 87, "y": 57, "k": 26}, "interpolated": false}, {"id": "dk19", "tone": "dk", "toneInfo": {"name": "dark", "ja": "ダーク", "image": "暗い"}, "hue": 19, "hueName": "pB", "rgb": {"r": 32, "g": 48, "b": 80}, "hex": "#203050", "cmyk": {"c": 95.5, "m": 90.5, "y": 54.5, "k": 25.5}, "interpolated": true}, {"id": "dk20", "tone": "dk", "toneInfo": {"name": "dark", "ja": "ダーク", "image": "暗い"}, "hue": 20, "hueName": "V", "rgb": {"r": 48, "g": 45, "b": 79}, "hex": "#302D4F", "cmyk": {"c": 91, "m": 94, "y": 52, "k": 25}, "interpolated": false}, {"id": "dk21", "tone": "dk", "toneInfo": {"name": "dark", "ja": "ダーク", "image": "暗い"}, "hue": 21, "hueName": "bP", "rgb": {"r": 57, "g": 42, "b": 74}, "hex": "#392A4A", "cmyk": {"c": 84.0, "m": 94.5, "y": 53.5, "k": 28.0}, "interpolated": true}, {"id": "dk22", "tone": "dk", "toneInfo": {"name": "dark", "ja": "ダーク", "image": "暗い"}, "hue": 22, "hueName": "P", "rgb": {"r": 66, "g": 39, "b": 70}, "hex": "#422746", "cmyk": {"c": 77, "m": 95, "y": 55, "k": 31}, "interpolated": false}, {"id": "dk23", "tone": "dk", "toneInfo": {"name": "dark", "ja": "ダーク", "image": "暗い"}, "hue": 23, "hueName": "rP", "rgb": {"r": 80, "g": 42, "b": 70}, "hex": "#502A46", "cmyk": {"c": 69.0, "m": 94.0, "y": 58.0, "k": 27.5}, "interpolated": true}, {"id": "dk24", "tone": "dk", "toneInfo": {"name": "dark", "ja": "ダーク", "image": "暗い"}, "hue": 24, "hueName": "RP", "rgb": {"r": 95, "g": 44, "b": 69}, "hex": "#5F2C45", "cmyk": {"c": 61, "m": 93, "y": 61, "k": 24}, "interpolated": false}, {"id": "p1", "tone": "p", "toneInfo": {"name": "pale", "ja": "ペール", "image": "薄い"}, "hue": 1, "hueName": "pR", "rgb": {"r": 226, "g": 210, "b": 212}, "hex": "#E2D2D4", "cmyk": {"c": 10.5, "m": 20.5, "y": 12.5, "k": 0.0}, "interpolated": true}, {"id": "p2", "tone": "p", "toneInfo": {"name": "pale", "ja": "ペール", "image": "薄い"}, "hue": 2, "hueName": "R", "rgb": {"r": 227, "g": 210, "b": 209}, "hex": "#E3D2D1", "cmyk": {"c": 10, "m": 21, "y": 14, "k": 0}, "interpolated": false}, {"id": "p3", "tone": "p", "toneInfo": {"name": "pale", "ja": "ペール", "image": "薄い"}, "hue": 3, "hueName": "yR", "rgb": {"r": 228, "g": 210, "b": 206}, "hex": "#E4D2CE", "cmyk": {"c": 9.0, "m": 21.5, "y": 15.5, "k": 0.0}, "interpolated": true}, {"id": "p4", "tone": "p", "toneInfo": {"name": "pale", "ja": "ペール", "image": "薄い"}, "hue": 4, "hueName": "rO", "rgb": {"r": 230, "g": 210, "b": 204}, "hex": "#E6D2CC", "cmyk": {"c": 8, "m": 22, "y": 17, "k": 0}, "interpolated": false}, {"id": "p5", "tone": "p", "toneInfo": {"name": "pale", "ja": "ペール", "image": "薄い"}, "hue": 5, "hueName": "O", "rgb": {"r": 236, "g": 217, "b": 204}, "hex": "#ECD9CC", "cmyk": {"c": 5.0, "m": 19.0, "y": 19.0, "k": 0.0}, "interpolated": true}, {"id": "p6", "tone": "p", "toneInfo": {"name": "pale", "ja": "ペール", "image": "薄い"}, "hue": 6, "hueName": "yO", "rgb": {"r": 243, "g": 224, "b": 203}, "hex": "#F3E0CB", "cmyk": {"c": 2, "m": 16, "y": 21, "k": 0}, "interpolated": false}, {"id": "p7", "tone": "p", "toneInfo": {"name": "pale", "ja": "ペール", "image": "薄い"}, "hue": 7, "hueName": "rY", "rgb": {"r": 240, "g": 226, "b": 200}, "hex": "#F0E2C8", "cmyk": {"c": 5.5, "m": 14.0, "y": 24.0, "k": 0.0}, "interpolated": true}, {"id": "p8", "tone": "p", "toneInfo": {"name": "pale", "ja": "ペール", "image": "薄い"}, "hue": 8, "hueName": "Y", "rgb": {"r": 236, "g": 227, "b": 196}, "hex": "#ECE3C4", "cmyk": {"c": 9, "m": 12, "y": 27, "k": 0}, "interpolated": false}, {"id": "p9", "tone": "p", "toneInfo": {"name": "pale", "ja": "ペール", "image": "薄い"}, "hue": 9, "hueName": "gY", "rgb": {"r": 232, "g": 228, "b": 196}, "hex": "#E8E4C4", "cmyk": {"c": 12.0, "m": 9.5, "y": 28.5, "k": 0.0}, "interpolated": true}, {"id": "p10", "tone": "p", "toneInfo": {"name": "pale", "ja": "ペール", "image": "薄い"}, "hue": 10, "hueName": "YG", "rgb": {"r": 227, "g": 230, "b": 195}, "hex": "#E3E6C3", "cmyk": {"c": 15, "m": 7, "y": 30, "k": 0}, "interpolated": false}, {"id": "p11", "tone": "p", "toneInfo": {"name": "pale", "ja": "ペール", "image": "薄い"}, "hue": 11, "hueName": "yG", "rgb": {"r": 210, "g": 226, "b": 198}, "hex": "#D2E2C6", "cmyk": {"c": 24.5, "m": 5.0, "y": 28.5, "k": 0.0}, "interpolated": true}, {"id": "p12", "tone": "p", "toneInfo": {"name": "pale", "ja": "ペール", "image": "薄い"}, "hue": 12, "hueName": "G", "rgb": {"r": 194, "g": 221, "b": 201}, "hex": "#C2DDC9", "cmyk": {"c": 34, "m": 3, "y": 27, "k": 0}, "interpolated": false}, {"id": "p13", "tone": "p", "toneInfo": {"name": "pale", "ja": "ペール", "image": "薄い"}, "hue": 13, "hueName": "bG", "rgb": {"r": 192, "g": 221, "b": 208}, "hex": "#C0DDD0", "cmyk": {"c": 35.5, "m": 2.5, "y": 24.0, "k": 0.0}, "interpolated": true}, {"id": "p14", "tone": "p", "toneInfo": {"name": "pale", "ja": "ペール", "image": "薄い"}, "hue": 14, "hueName": "BG", "rgb": {"r": 189, "g": 221, "b": 214}, "hex": "#BDDDD6", "cmyk": {"c": 37, "m": 2, "y": 21, "k": 0}, "interpolated": false}, {"id": "p15", "tone": "p", "toneInfo": {"name": "pale", "ja": "ペール", "image": "薄い"}, "hue": 15, "hueName": "BG", "rgb": {"r": 192, "g": 220, "b": 218}, "hex": "#C0DCDA", "cmyk": {"c": 34.0, "m": 4.5, "y": 17.0, "k": 0.0}, "interpolated": true}, {"id": "p16", "tone": "p", "toneInfo": {"name": "pale", "ja": "ペール", "image": "薄い"}, "hue": 16, "hueName": "gB", "rgb": {"r": 196, "g": 218, "b": 223}, "hex": "#C4DADF", "cmyk": {"c": 31, "m": 7, "y": 13, "k": 0}, "interpolated": false}, {"id": "p17", "tone": "p", "toneInfo": {"name": "pale", "ja": "ペール", "image": "薄い"}, "hue": 17, "hueName": "B", "rgb": {"r": 194, "g": 210, "b": 216}, "hex": "#C2D2D8", "cmyk": {"c": 31.0, "m": 11.5, "y": 13.5, "k": 0.0}, "interpolated": true}, {"id": "p18", "tone": "p", "toneInfo": {"name": "pale", "ja": "ペール", "image": "薄い"}, "hue": 18, "hueName": "B", "rgb": {"r": 191, "g": 201, "b": 210}, "hex": "#BFC9D2", "cmyk": {"c": 31, "m": 16, "y": 14, "k": 0}, "interpolated": false}, {"id": "p19", "tone": "p", "toneInfo": {"name": "pale", "ja": "ペール", "image": "薄い"}, "hue": 19, "hueName": "pB", "rgb": {"r": 194, "g": 200, "b": 210}, "hex": "#C2C8D2", "cmyk": {"c": 28.5, "m": 18.0, "y": 13.0, "k": 0.0}, "interpolated": true}, {"id": "p20", "tone": "p", "toneInfo": {"name": "pale", "ja": "ペール", "image": "薄い"}, "hue": 20, "hueName": "V", "rgb": {"r": 198, "g": 199, "b": 210}, "hex": "#C6C7D2", "cmyk": {"c": 26, "m": 20, "y": 12, "k": 0}, "interpolated": false}, {"id": "p21", "tone": "p", "toneInfo": {"name": "pale", "ja": "ペール", "image": "薄い"}, "hue": 21, "hueName": "bP", "rgb": {"r": 202, "g": 198, "b": 208}, "hex": "#CAC6D0", "cmyk": {"c": 23.5, "m": 21.5, "y": 12.5, "k": 0.0}, "interpolated": true}, {"id": "p22", "tone": "p", "toneInfo": {"name": "pale", "ja": "ペール", "image": "薄い"}, "hue": 22, "hueName": "P", "rgb": {"r": 205, "g": 197, "b": 206}, "hex": "#CDC5CE", "cmyk": {"c": 21, "m": 23, "y": 13, "k": 0}, "interpolated": false}, {"id": "p23", "tone": "p", "toneInfo": {"name": "pale", "ja": "ペール", "image": "薄い"}, "hue": 23, "hueName": "rP", "rgb": {"r": 215, "g": 204, "b": 210}, "hex": "#D7CCD2", "cmyk": {"c": 16.0, "m": 21.5, "y": 12.0, "k": 0.0}, "interpolated": true}, {"id": "p24", "tone": "p", "toneInfo": {"name": "pale", "ja": "ペール", "image": "薄い"}, "hue": 24, "hueName": "RP", "rgb": {"r": 225, "g": 210, "b": 214}, "hex": "#E1D2D6", "cmyk": {"c": 11, "m": 20, "y": 11, "k": 0}, "interpolated": false}, {"id": "ltg1", "tone": "ltg", "toneInfo": {"name": "light grayish", "ja": "ライトグレイッシュ", "image": "明るい灰みの"}, "hue": 1, "hueName": "pR", "rgb": {"r": 188, "g": 169, "b": 170}, "hex": "#BCA9AA", "cmyk": {"c": 28.0, "m": 36.0, "y": 26.5, "k": 0.0}, "interpolated": true}, {"id": "ltg2", "tone": "ltg", "toneInfo": {"name": "light grayish", "ja": "ライトグレイッシュ", "image": "明るい灰みの"}, "hue": 2, "hueName": "R", "rgb": {"r": 189, "g": 169, "b": 168}, "hex": "#BDA9A8", "cmyk": {"c": 27, "m": 36, "y": 28, "k": 0}, "interpolated": false}, {"id": "ltg3", "tone": "ltg", "toneInfo": {"name": "light grayish", "ja": "ライトグレイッシュ", "image": "明るい灰みの"}, "hue": 3, "hueName": "yR", "rgb": {"r": 190, "g": 169, "b": 165}, "hex": "#BEA9A5", "cmyk": {"c": 26.5, "m": 36.0, "y": 30.0, "k": 0.0}, "interpolated": true}, {"id": "ltg4", "tone": "ltg", "toneInfo": {"name": "light grayish", "ja": "ライトグレイッシュ", "image": "明るい灰みの"}, "hue": 4, "hueName": "rO", "rgb": {"r": 191, "g": 169, "b": 162}, "hex": "#BFA9A2", "cmyk": {"c": 26, "m": 36, "y": 32, "k": 0}, "interpolated": false}, {"id": "ltg5", "tone": "ltg", "toneInfo": {"name": "light grayish", "ja": "ライトグレイッシュ", "image": "明るい灰みの"}, "hue": 5, "hueName": "O", "rgb": {"r": 197, "g": 176, "b": 164}, "hex": "#C5B0A4", "cmyk": {"c": 23.5, "m": 33.0, "y": 32.5, "k": 0.0}, "interpolated": true}, {"id": "ltg6", "tone": "ltg", "toneInfo": {"name": "light grayish", "ja": "ライトグレイッシュ", "image": "明るい灰みの"}, "hue": 6, "hueName": "yO", "rgb": {"r": 203, "g": 184, "b": 166}, "hex": "#CBB8A6", "cmyk": {"c": 21, "m": 30, "y": 33, "k": 0}, "interpolated": false}, {"id": "ltg7", "tone": "ltg", "toneInfo": {"name": "light grayish", "ja": "ライトグレイッシュ", "image": "明るい灰みの"}, "hue": 7, "hueName": "rY", "rgb": {"r": 200, "g": 186, "b": 162}, "hex": "#C8BAA2", "cmyk": {"c": 23.5, "m": 28.0, "y": 36.0, "k": 0.0}, "interpolated": true}, {"id": "ltg8", "tone": "ltg", "toneInfo": {"name": "light grayish", "ja": "ライトグレイッシュ", "image": "明るい灰みの"}, "hue": 8, "hueName": "Y", "rgb": {"r": 196, "g": 187, "b": 159}, "hex": "#C4BB9F", "cmyk": {"c": 26, "m": 26, "y": 39, "k": 0}, "interpolated": false}, {"id": "ltg9", "tone": "ltg", "toneInfo": {"name": "light grayish", "ja": "ライトグレイッシュ", "image": "明るい灰みの"}, "hue": 9, "hueName": "gY", "rgb": {"r": 192, "g": 188, "b": 160}, "hex": "#C0BCA0", "cmyk": {"c": 29.5, "m": 23.5, "y": 39.5, "k": 0.0}, "interpolated": true}, {"id": "ltg10", "tone": "ltg", "toneInfo": {"name": "light grayish", "ja": "ライトグレイッシュ", "image": "明るい灰みの"}, "hue": 10, "hueName": "YG", "rgb": {"r": 187, "g": 190, "b": 160}, "hex": "#BBBEA0", "cmyk": {"c": 33, "m": 21, "y": 40, "k": 0}, "interpolated": false}, {"id": "ltg11", "tone": "ltg", "toneInfo": {"name": "light grayish", "ja": "ライトグレイッシュ", "image": "明るい灰みの"}, "hue": 11, "hueName": "yG", "rgb": {"r": 171, "g": 185, "b": 161}, "hex": "#ABB9A1", "cmyk": {"c": 41.0, "m": 20.0, "y": 40.0, "k": 0.0}, "interpolated": true}, {"id": "ltg12", "tone": "ltg", "toneInfo": {"name": "light grayish", "ja": "ライトグレイッシュ", "image": "明るい灰みの"}, "hue": 12, "hueName": "G", "rgb": {"r": 155, "g": 180, "b": 162}, "hex": "#9BB4A2", "cmyk": {"c": 49, "m": 19, "y": 40, "k": 0}, "interpolated": false}, {"id": "ltg13", "tone": "ltg", "toneInfo": {"name": "light grayish", "ja": "ライトグレイッシュ", "image": "明るい灰みの"}, "hue": 13, "hueName": "bG", "rgb": {"r": 152, "g": 180, "b": 168}, "hex": "#98B4A8", "cmyk": {"c": 50.5, "m": 19.0, "y": 36.5, "k": 0.0}, "interpolated": true}, {"id": "ltg14", "tone": "ltg", "toneInfo": {"name": "light grayish", "ja": "ライトグレイッシュ", "image": "明るい灰みの"}, "hue": 14, "hueName": "BG", "rgb": {"r": 150, "g": 180, "b": 175}, "hex": "#96B4AF", "cmyk": {"c": 52, "m": 19, "y": 33, "k": 0}, "interpolated": false}, {"id": "ltg15", "tone": "ltg", "toneInfo": {"name": "light grayish", "ja": "ライトグレイッシュ", "image": "明るい灰みの"}, "hue": 15, "hueName": "BG", "rgb": {"r": 152, "g": 179, "b": 179}, "hex": "#98B3B3", "cmyk": {"c": 50.5, "m": 20.5, "y": 30.0, "k": 0.0}, "interpolated": true}, {"id": "ltg16", "tone": "ltg", "toneInfo": {"name": "light grayish", "ja": "ライトグレイッシュ", "image": "明るい灰みの"}, "hue": 16, "hueName": "gB", "rgb": {"r": 155, "g": 178, "b": 183}, "hex": "#9BB2B7", "cmyk": {"c": 49, "m": 22, "y": 27, "k": 0}, "interpolated": false}, {"id": "ltg17", "tone": "ltg", "toneInfo": {"name": "light grayish", "ja": "ライトグレイッシュ", "image": "明るい灰みの"}, "hue": 17, "hueName": "B", "rgb": {"r": 154, "g": 170, "b": 178}, "hex": "#9AAAB2", "cmyk": {"c": 48.5, "m": 27.0, "y": 26.5, "k": 0.0}, "interpolated": true}, {"id": "ltg18", "tone": "ltg", "toneInfo": {"name": "light grayish", "ja": "ライトグレイッシュ", "image": "明るい灰みの"}, "hue": 18, "hueName": "B", "rgb": {"r": 152, "g": 162, "b": 173}, "hex": "#98A2AD", "cmyk": {"c": 48, "m": 32, "y": 26, "k": 0}, "interpolated": false}, {"id": "ltg19", "tone": "ltg", "toneInfo": {"name": "light grayish", "ja": "ライトグレイッシュ", "image": "明るい灰みの"}, "hue": 19, "hueName": "pB", "rgb": {"r": 156, "g": 161, "b": 172}, "hex": "#9CA1AC", "cmyk": {"c": 45.5, "m": 33.5, "y": 25.5, "k": 0.0}, "interpolated": true}, {"id": "ltg20", "tone": "ltg", "toneInfo": {"name": "light grayish", "ja": "ライトグレイッシュ", "image": "明るい灰みの"}, "hue": 20, "hueName": "V", "rgb": {"r": 160, "g": 160, "b": 172}, "hex": "#A0A0AC", "cmyk": {"c": 43, "m": 35, "y": 25, "k": 0}, "interpolated": false}, {"id": "ltg21", "tone": "ltg", "toneInfo": {"name": "light grayish", "ja": "ライトグレイッシュ", "image": "明るい灰みの"}, "hue": 21, "hueName": "bP", "rgb": {"r": 164, "g": 159, "b": 170}, "hex": "#A49FAA", "cmyk": {"c": 40.5, "m": 36.5, "y": 25.0, "k": 0.0}, "interpolated": true}, {"id": "ltg22", "tone": "ltg", "toneInfo": {"name": "light grayish", "ja": "ライトグレイッシュ", "image": "明るい灰みの"}, "hue": 22, "hueName": "P", "rgb": {"r": 168, "g": 158, "b": 169}, "hex": "#A89EA9", "cmyk": {"c": 38, "m": 38, "y": 25, "k": 0}, "interpolated": false}, {"id": "ltg23", "tone": "ltg", "toneInfo": {"name": "light grayish", "ja": "ライトグレイッシュ", "image": "明るい灰みの"}, "hue": 23, "hueName": "rP", "rgb": {"r": 177, "g": 164, "b": 171}, "hex": "#B1A4AB", "cmyk": {"c": 33.5, "m": 37.0, "y": 25.0, "k": 0.0}, "interpolated": true}, {"id": "ltg24", "tone": "ltg", "toneInfo": {"name": "light grayish", "ja": "ライトグレイッシュ", "image": "明るい灰みの"}, "hue": 24, "hueName": "RP", "rgb": {"r": 186, "g": 169, "b": 173}, "hex": "#BAA9AD", "cmyk": {"c": 29, "m": 36, "y": 25, "k": 0}, "interpolated": false}, {"id": "g1", "tone": "g", "toneInfo": {"name": "grayish", "ja": "グレイッシュ", "image": "灰みの"}, "hue": 1, "hueName": "pR", "rgb": {"r": 113, "g": 90, "b": 94}, "hex": "#715A5E", "cmyk": {"c": 60.0, "m": 68.5, "y": 57.5, "k": 8.0}, "interpolated": true}, {"id": "g2", "tone": "g", "toneInfo": {"name": "grayish", "ja": "グレイッシュ", "image": "灰みの"}, "hue": 2, "hueName": "R", "rgb": {"r": 114, "g": 90, "b": 90}, "hex": "#725A5A", "cmyk": {"c": 59, "m": 68, "y": 60, "k": 9}, "interpolated": false}, {"id": "g3", "tone": "g", "toneInfo": {"name": "grayish", "ja": "グレイッシュ", "image": "灰みの"}, "hue": 3, "hueName": "yR", "rgb": {"r": 114, "g": 90, "b": 88}, "hex": "#725A58", "cmyk": {"c": 58.5, "m": 68.0, "y": 61.5, "k": 10.0}, "interpolated": true}, {"id": "g4", "tone": "g", "toneInfo": {"name": "grayish", "ja": "グレイッシュ", "image": "灰みの"}, "hue": 4, "hueName": "rO", "rgb": {"r": 115, "g": 90, "b": 85}, "hex": "#735A55", "cmyk": {"c": 58, "m": 68, "y": 63, "k": 11}, "interpolated": false}, {"id": "g5", "tone": "g", "toneInfo": {"name": "grayish", "ja": "グレイッシュ", "image": "灰みの"}, "hue": 5, "hueName": "O", "rgb": {"r": 120, "g": 98, "b": 88}, "hex": "#786258", "cmyk": {"c": 56.5, "m": 64.0, "y": 64.0, "k": 8.0}, "interpolated": true}, {"id": "g6", "tone": "g", "toneInfo": {"name": "grayish", "ja": "グレイッシュ", "image": "灰みの"}, "hue": 6, "hueName": "yO", "rgb": {"r": 126, "g": 106, "b": 90}, "hex": "#7E6A5A", "cmyk": {"c": 55, "m": 60, "y": 65, "k": 5}, "interpolated": false}, {"id": "g7", "tone": "g", "toneInfo": {"name": "grayish", "ja": "グレイッシュ", "image": "灰みの"}, "hue": 7, "hueName": "rY", "rgb": {"r": 122, "g": 108, "b": 88}, "hex": "#7A6C58", "cmyk": {"c": 57.0, "m": 58.5, "y": 67.5, "k": 6.0}, "interpolated": true}, {"id": "g8", "tone": "g", "toneInfo": {"name": "grayish", "ja": "グレイッシュ", "image": "灰みの"}, "hue": 8, "hueName": "Y", "rgb": {"r": 118, "g": 109, "b": 86}, "hex": "#766D56", "cmyk": {"c": 59, "m": 57, "y": 70, "k": 7}, "interpolated": false}, {"id": "g9", "tone": "g", "toneInfo": {"name": "grayish", "ja": "グレイッシュ", "image": "灰みの"}, "hue": 9, "hueName": "gY", "rgb": {"r": 113, "g": 110, "b": 88}, "hex": "#716E58", "cmyk": {"c": 62.5, "m": 55.0, "y": 69.5, "k": 6.5}, "interpolated": true}, {"id": "g10", "tone": "g", "toneInfo": {"name": "grayish", "ja": "グレイッシュ", "image": "灰みの"}, "hue": 10, "hueName": "YG", "rgb": {"r": 108, "g": 112, "b": 89}, "hex": "#6C7059", "cmyk": {"c": 66, "m": 53, "y": 69, "k": 6}, "interpolated": false}, {"id": "g11", "tone": "g", "toneInfo": {"name": "grayish", "ja": "グレイッシュ", "image": "灰みの"}, "hue": 11, "hueName": "yG", "rgb": {"r": 95, "g": 106, "b": 88}, "hex": "#5F6A58", "cmyk": {"c": 71.5, "m": 54.0, "y": 68.5, "k": 9.0}, "interpolated": true}, {"id": "g12", "tone": "g", "toneInfo": {"name": "grayish", "ja": "グレイッシュ", "image": "灰みの"}, "hue": 12, "hueName": "G", "rgb": {"r": 82, "g": 101, "b": 88}, "hex": "#526558", "cmyk": {"c": 77, "m": 55, "y": 68, "k": 12}, "interpolated": false}, {"id": "g13", "tone": "g", "toneInfo": {"name": "grayish", "ja": "グレイッシュ", "image": "灰みの"}, "hue": 13, "hueName": "bG", "rgb": {"r": 79, "g": 101, "b": 94}, "hex": "#4F655E", "cmyk": {"c": 79.0, "m": 55.5, "y": 64.0, "k": 10.5}, "interpolated": true}, {"id": "g14", "tone": "g", "toneInfo": {"name": "grayish", "ja": "グレイッシュ", "image": "灰みの"}, "hue": 14, "hueName": "BG", "rgb": {"r": 76, "g": 101, "b": 99}, "hex": "#4C6563", "cmyk": {"c": 81, "m": 56, "y": 60, "k": 9}, "interpolated": false}, {"id": "g15", "tone": "g", "toneInfo": {"name": "grayish", "ja": "グレイッシュ", "image": "灰みの"}, "hue": 15, "hueName": "BG", "rgb": {"r": 77, "g": 100, "b": 102}, "hex": "#4D6466", "cmyk": {"c": 80.5, "m": 57.0, "y": 57.5, "k": 8.0}, "interpolated": true}, {"id": "g16", "tone": "g", "toneInfo": {"name": "grayish", "ja": "グレイッシュ", "image": "灰みの"}, "hue": 16, "hueName": "gB", "rgb": {"r": 78, "g": 100, "b": 106}, "hex": "#4E646A", "cmyk": {"c": 80, "m": 58, "y": 55, "k": 7}, "interpolated": false}, {"id": "g17", "tone": "g", "toneInfo": {"name": "grayish", "ja": "グレイッシュ", "image": "灰みの"}, "hue": 17, "hueName": "B", "rgb": {"r": 76, "g": 93, "b": 102}, "hex": "#4C5D66", "cmyk": {"c": 80.0, "m": 62.0, "y": 54.5, "k": 9.0}, "interpolated": true}, {"id": "g18", "tone": "g", "toneInfo": {"name": "grayish", "ja": "グレイッシュ", "image": "灰みの"}, "hue": 18, "hueName": "B", "rgb": {"r": 75, "g": 86, "b": 99}, "hex": "#4B5663", "cmyk": {"c": 80, "m": 66, "y": 54, "k": 11}, "interpolated": false}, {"id": "g19", "tone": "g", "toneInfo": {"name": "grayish", "ja": "グレイッシュ", "image": "灰みの"}, "hue": 19, "hueName": "pB", "rgb": {"r": 80, "g": 84, "b": 100}, "hex": "#505464", "cmyk": {"c": 77.5, "m": 68.0, "y": 52.5, "k": 10.5}, "interpolated": true}, {"id": "g20", "tone": "g", "toneInfo": {"name": "grayish", "ja": "グレイッシュ", "image": "灰みの"}, "hue": 20, "hueName": "V", "rgb": {"r": 84, "g": 83, "b": 100}, "hex": "#545364", "cmyk": {"c": 75, "m": 70, "y": 51, "k": 10}, "interpolated": false}, {"id": "g21", "tone": "g", "toneInfo": {"name": "grayish", "ja": "グレイッシュ", "image": "灰みの"}, "hue": 21, "hueName": "bP", "rgb": {"r": 89, "g": 82, "b": 98}, "hex": "#595262", "cmyk": {"c": 72.5, "m": 71.5, "y": 51.5, "k": 10.5}, "interpolated": true}, {"id": "g22", "tone": "g", "toneInfo": {"name": "grayish", "ja": "グレイッシュ", "image": "灰みの"}, "hue": 22, "hueName": "P", "rgb": {"r": 94, "g": 80, "b": 96}, "hex": "#5E5060", "cmyk": {"c": 70, "m": 73, "y": 52, "k": 11}, "interpolated": false}, {"id": "g23", "tone": "g", "toneInfo": {"name": "grayish", "ja": "グレイッシュ", "image": "灰みの"}, "hue": 23, "hueName": "rP", "rgb": {"r": 103, "g": 85, "b": 96}, "hex": "#675560", "cmyk": {"c": 65.5, "m": 71.0, "y": 53.5, "k": 9.0}, "interpolated": true}, {"id": "g24", "tone": "g", "toneInfo": {"name": "grayish", "ja": "グレイッシュ", "image": "灰みの"}, "hue": 24, "hueName": "RP", "rgb": {"r": 112, "g": 90, "b": 97}, "hex": "#705A61", "cmyk": {"c": 61, "m": 69, "y": 55, "k": 7}, "interpolated": false}, {"id": "dkg1", "tone": "dkg", "toneInfo": {"name": "dark grayish", "ja": "ダークグレイッシュ", "image": "暗い灰みの"}, "hue": 1, "hueName": "pR", "rgb": {"r": 61, "g": 44, "b": 49}, "hex": "#3D2C31", "cmyk": {"c": 71.5, "m": 82.5, "y": 71.0, "k": 48.5}, "interpolated": true}, {"id": "dkg2", "tone": "dkg", "toneInfo": {"name": "dark grayish", "ja": "ダークグレイッシュ", "image": "暗い灰みの"}, "hue": 2, "hueName": "R", "rgb": {"r": 62, "g": 44, "b": 47}, "hex": "#3E2C2F", "cmyk": {"c": 70, "m": 82, "y": 73, "k": 49}, "interpolated": false}, {"id": "dkg3", "tone": "dkg", "toneInfo": {"name": "dark grayish", "ja": "ダークグレイッシュ", "image": "暗い灰みの"}, "hue": 3, "hueName": "yR", "rgb": {"r": 62, "g": 44, "b": 45}, "hex": "#3E2C2D", "cmyk": {"c": 69.5, "m": 81.0, "y": 75.0, "k": 50.0}, "interpolated": true}, {"id": "dkg4", "tone": "dkg", "toneInfo": {"name": "dark grayish", "ja": "ダークグレイッシュ", "image": "暗い灰みの"}, "hue": 4, "hueName": "rO", "rgb": {"r": 62, "g": 45, "b": 43}, "hex": "#3E2D2B", "cmyk": {"c": 69, "m": 80, "y": 77, "k": 51}, "interpolated": false}, {"id": "dkg5", "tone": "dkg", "toneInfo": {"name": "dark grayish", "ja": "ダークグレイッシュ", "image": "暗い灰みの"}, "hue": 5, "hueName": "O", "rgb": {"r": 67, "g": 52, "b": 46}, "hex": "#43342E", "cmyk": {"c": 68.5, "m": 76.5, "y": 78.5, "k": 46.5}, "interpolated": true}, {"id": "dkg6", "tone": "dkg", "toneInfo": {"name": "dark grayish", "ja": "ダークグレイッシュ", "image": "暗い灰みの"}, "hue": 6, "hueName": "yO", "rgb": {"r": 72, "g": 59, "b": 49}, "hex": "#483B31", "cmyk": {"c": 68, "m": 73, "y": 80, "k": 42}, "interpolated": false}, {"id": "dkg7", "tone": "dkg", "toneInfo": {"name": "dark grayish", "ja": "ダークグレイッシュ", "image": "暗い灰みの"}, "hue": 7, "hueName": "rY", "rgb": {"r": 70, "g": 60, "b": 48}, "hex": "#463C30", "cmyk": {"c": 69.5, "m": 71.5, "y": 81.5, "k": 42.5}, "interpolated": true}, {"id": "dkg8", "tone": "dkg", "toneInfo": {"name": "dark grayish", "ja": "ダークグレイッシュ", "image": "暗い灰みの"}, "hue": 8, "hueName": "Y", "rgb": {"r": 67, "g": 61, "b": 47}, "hex": "#433D2F", "cmyk": {"c": 71, "m": 70, "y": 83, "k": 43}, "interpolated": false}, {"id": "dkg9", "tone": "dkg", "toneInfo": {"name": "dark grayish", "ja": "ダークグレイッシュ", "image": "暗い灰みの"}, "hue": 9, "hueName": "gY", "rgb": {"r": 64, "g": 62, "b": 48}, "hex": "#403E30", "cmyk": {"c": 74.0, "m": 68.5, "y": 82.5, "k": 43.0}, "interpolated": true}, {"id": "dkg10", "tone": "dkg", "toneInfo": {"name": "dark grayish", "ja": "ダークグレイッシュ", "image": "暗い灰みの"}, "hue": 10, "hueName": "YG", "rgb": {"r": 60, "g": 63, "b": 50}, "hex": "#3C3F32", "cmyk": {"c": 77, "m": 67, "y": 82, "k": 43}, "interpolated": false}, {"id": "dkg11", "tone": "dkg", "toneInfo": {"name": "dark grayish", "ja": "ダークグレイッシュ", "image": "暗い灰みの"}, "hue": 11, "hueName": "yG", "rgb": {"r": 51, "g": 57, "b": 48}, "hex": "#333930", "cmyk": {"c": 82.0, "m": 71.5, "y": 75.5, "k": 44.5}, "interpolated": true}, {"id": "dkg12", "tone": "dkg", "toneInfo": {"name": "dark grayish", "ja": "ダークグレイッシュ", "image": "暗い灰みの"}, "hue": 12, "hueName": "G", "rgb": {"r": 42, "g": 51, "b": 45}, "hex": "#2A332D", "cmyk": {"c": 87, "m": 76, "y": 69, "k": 46}, "interpolated": false}, {"id": "dkg13", "tone": "dkg", "toneInfo": {"name": "dark grayish", "ja": "ダークグレイッシュ", "image": "暗い灰みの"}, "hue": 13, "hueName": "bG", "rgb": {"r": 40, "g": 51, "b": 48}, "hex": "#283330", "cmyk": {"c": 88.0, "m": 74.5, "y": 71.5, "k": 48.0}, "interpolated": true}, {"id": "dkg14", "tone": "dkg", "toneInfo": {"name": "dark grayish", "ja": "ダークグレイッシュ", "image": "暗い灰みの"}, "hue": 14, "hueName": "BG", "rgb": {"r": 38, "g": 51, "b": 51}, "hex": "#263333", "cmyk": {"c": 89, "m": 73, "y": 74, "k": 50}, "interpolated": false}, {"id": "dkg15", "tone": "dkg", "toneInfo": {"name": "dark grayish", "ja": "ダークグレイッシュ", "image": "暗い灰みの"}, "hue": 15, "hueName": "BG", "rgb": {"r": 38, "g": 51, "b": 54}, "hex": "#263336", "cmyk": {"c": 89.5, "m": 74.5, "y": 71.5, "k": 48.0}, "interpolated": true}, {"id": "dkg16", "tone": "dkg", "toneInfo": {"name": "dark grayish", "ja": "ダークグレイッシュ", "image": "暗い灰みの"}, "hue": 16, "hueName": "gB", "rgb": {"r": 38, "g": 51, "b": 56}, "hex": "#263338", "cmyk": {"c": 90, "m": 76, "y": 69, "k": 46}, "interpolated": false}, {"id": "dkg17", "tone": "dkg", "toneInfo": {"name": "dark grayish", "ja": "ダークグレイッシュ", "image": "暗い灰みの"}, "hue": 17, "hueName": "B", "rgb": {"r": 36, "g": 46, "b": 54}, "hex": "#242E36", "cmyk": {"c": 90.5, "m": 79.5, "y": 68.5, "k": 48.5}, "interpolated": true}, {"id": "dkg18", "tone": "dkg", "toneInfo": {"name": "dark grayish", "ja": "ダークグレイッシュ", "image": "暗い灰みの"}, "hue": 18, "hueName": "B", "rgb": {"r": 33, "g": 41, "b": 51}, "hex": "#212933", "cmyk": {"c": 91, "m": 83, "y": 68, "k": 51}, "interpolated": false}, {"id": "dkg19", "tone": "dkg", "toneInfo": {"name": "dark grayish", "ja": "ダークグレイッシュ", "image": "暗い灰みの"}, "hue": 19, "hueName": "pB", "rgb": {"r": 36, "g": 40, "b": 52}, "hex": "#242834", "cmyk": {"c": 89.0, "m": 85.0, "y": 66.5, "k": 50.5}, "interpolated": true}, {"id": "dkg20", "tone": "dkg", "toneInfo": {"name": "dark grayish", "ja": "ダークグレイッシュ", "image": "暗い灰みの"}, "hue": 20, "hueName": "V", "rgb": {"r": 40, "g": 38, "b": 52}, "hex": "#282634", "cmyk": {"c": 87, "m": 87, "y": 65, "k": 50}, "interpolated": false}, {"id": "dkg21", "tone": "dkg", "toneInfo": {"name": "dark grayish", "ja": "ダークグレイッシュ", "image": "暗い灰みの"}, "hue": 21, "hueName": "bP", "rgb": {"r": 44, "g": 37, "b": 50}, "hex": "#2C2532", "cmyk": {"c": 83.5, "m": 87.5, "y": 66.0, "k": 51.0}, "interpolated": true}, {"id": "dkg22", "tone": "dkg", "toneInfo": {"name": "dark grayish", "ja": "ダークグレイッシュ", "image": "暗い灰みの"}, "hue": 22, "hueName": "P", "rgb": {"r": 47, "g": 36, "b": 49}, "hex": "#2F2431", "cmyk": {"c": 80, "m": 88, "y": 67, "k": 52}, "interpolated": false}, {"id": "dkg23", "tone": "dkg", "toneInfo": {"name": "dark grayish", "ja": "ダークグレイッシュ", "image": "暗い灰みの"}, "hue": 23, "hueName": "rP", "rgb": {"r": 54, "g": 40, "b": 50}, "hex": "#362832", "cmyk": {"c": 76.5, "m": 85.5, "y": 68.0, "k": 50.0}, "interpolated": true}, {"id": "dkg24", "tone": "dkg", "toneInfo": {"name": "dark grayish", "ja": "ダークグレイッシュ", "image": "暗い灰みの"}, "hue": 24, "hueName": "RP", "rgb": {"r": 60, "g": 44, "b": 51}, "hex": "#3C2C33", "cmyk": {"c": 73, "m": 83, "y": 69, "k": 48}, "interpolated": false}, {"id": "n9.5", "tone": "neutral", "toneInfo": {"name": "neutral", "ja": "無彩色", "image": ""}, "hue": 0, "hueName": "W", "rgb": {"r": 241, "g": 241, "b": 241}, "hex": "#F1F1F1", "cmyk": {"c": 7, "m": 5, "y": 5, "k": 0}, "interpolated": false, "neutralLevel": 9.5}, {"id": "n9.0", "tone": "neutral", "toneInfo": {"name": "neutral", "ja": "無彩色", "image": ""}, "hue": 0, "hueName": "Gy-9.0", "rgb": {"r": 227, "g": 227, "b": 227}, "hex": "#E3E3E3", "cmyk": {"c": 13, "m": 10, "y": 10, "k": 0}, "interpolated": false, "neutralLevel": 9.0}, {"id": "n8.5", "tone": "neutral", "toneInfo": {"name": "neutral", "ja": "無彩色", "image": ""}, "hue": 0, "hueName": "Gy-8.5", "rgb": {"r": 213, "g": 213, "b": 213}, "hex": "#D5D5D5", "cmyk": {"c": 19, "m": 14, "y": 14, "k": 0}, "interpolated": false, "neutralLevel": 8.5}, {"id": "n8.0", "tone": "neutral", "toneInfo": {"name": "neutral", "ja": "無彩色", "image": ""}, "hue": 0, "hueName": "Gy-8.0", "rgb": {"r": 200, "g": 200, "b": 200}, "hex": "#C8C8C8", "cmyk": {"c": 25, "m": 19, "y": 18, "k": 0}, "interpolated": false, "neutralLevel": 8.0}, {"id": "n7.5", "tone": "neutral", "toneInfo": {"name": "neutral", "ja": "無彩色", "image": ""}, "hue": 0, "hueName": "Gy-7.5", "rgb": {"r": 187, "g": 187, "b": 187}, "hex": "#BBBBBB", "cmyk": {"c": 30, "m": 24, "y": 23, "k": 0}, "interpolated": false, "neutralLevel": 7.5}, {"id": "n7.0", "tone": "neutral", "toneInfo": {"name": "neutral", "ja": "無彩色", "image": ""}, "hue": 0, "hueName": "Gy-7.0", "rgb": {"r": 173, "g": 173, "b": 173}, "hex": "#ADADAD", "cmyk": {"c": 37, "m": 29, "y": 28, "k": 0}, "interpolated": false, "neutralLevel": 7.0}, {"id": "n6.5", "tone": "neutral", "toneInfo": {"name": "neutral", "ja": "無彩色", "image": ""}, "hue": 0, "hueName": "Gy-6.5", "rgb": {"r": 160, "g": 160, "b": 160}, "hex": "#A0A0A0", "cmyk": {"c": 42, "m": 34, "y": 32, "k": 0}, "interpolated": false, "neutralLevel": 6.5}, {"id": "n6.0", "tone": "neutral", "toneInfo": {"name": "neutral", "ja": "無彩色", "image": ""}, "hue": 0, "hueName": "Gy-6.0", "rgb": {"r": 147, "g": 147, "b": 147}, "hex": "#939393", "cmyk": {"c": 48, "m": 39, "y": 37, "k": 0}, "interpolated": false, "neutralLevel": 6.0}, {"id": "n5.5", "tone": "neutral", "toneInfo": {"name": "neutral", "ja": "無彩色", "image": ""}, "hue": 0, "hueName": "Gy-5.5", "rgb": {"r": 134, "g": 134, "b": 134}, "hex": "#868686", "cmyk": {"c": 54, "m": 45, "y": 42, "k": 0}, "interpolated": false, "neutralLevel": 5.5}, {"id": "n5.0", "tone": "neutral", "toneInfo": {"name": "neutral", "ja": "無彩色", "image": ""}, "hue": 0, "hueName": "Gy-5.0", "rgb": {"r": 121, "g": 121, "b": 121}, "hex": "#797979", "cmyk": {"c": 60, "m": 51, "y": 48, "k": 1}, "interpolated": false, "neutralLevel": 5.0}, {"id": "n4.5", "tone": "neutral", "toneInfo": {"name": "neutral", "ja": "無彩色", "image": ""}, "hue": 0, "hueName": "Gy-4.5", "rgb": {"r": 109, "g": 109, "b": 109}, "hex": "#6D6D6D", "cmyk": {"c": 65, "m": 57, "y": 54, "k": 3}, "interpolated": false, "neutralLevel": 4.5}, {"id": "n4.0", "tone": "neutral", "toneInfo": {"name": "neutral", "ja": "無彩色", "image": ""}, "hue": 0, "hueName": "Gy-4.0", "rgb": {"r": 96, "g": 96, "b": 96}, "hex": "#606060", "cmyk": {"c": 69, "m": 61, "y": 58, "k": 9}, "interpolated": false, "neutralLevel": 4.0}, {"id": "n3.5", "tone": "neutral", "toneInfo": {"name": "neutral", "ja": "無彩色", "image": ""}, "hue": 0, "hueName": "Gy-3.5", "rgb": {"r": 84, "g": 84, "b": 84}, "hex": "#545454", "cmyk": {"c": 73, "m": 65, "y": 62, "k": 18}, "interpolated": false, "neutralLevel": 3.5}, {"id": "n3.0", "tone": "neutral", "toneInfo": {"name": "neutral", "ja": "無彩色", "image": ""}, "hue": 0, "hueName": "Gy-3.0", "rgb": {"r": 72, "g": 72, "b": 72}, "hex": "#484848", "cmyk": {"c": 75, "m": 69, "y": 66, "k": 28}, "interpolated": false, "neutralLevel": 3.0}, {"id": "n2.5", "tone": "neutral", "toneInfo": {"name": "neutral", "ja": "無彩色", "image": ""}, "hue": 0, "hueName": "Gy-2.5", "rgb": {"r": 60, "g": 60, "b": 60}, "hex": "#3C3C3C", "cmyk": {"c": 78, "m": 72, "y": 70, "k": 40}, "interpolated": false, "neutralLevel": 2.5}, {"id": "n2.0", "tone": "neutral", "toneInfo": {"name": "neutral", "ja": "無彩色", "image": ""}, "hue": 0, "hueName": "Gy-2.0", "rgb": {"r": 49, "g": 49, "b": 49}, "hex": "#313131", "cmyk": {"c": 80, "m": 75, "y": 75, "k": 50}, "interpolated": false, "neutralLevel": 2.0}, {"id": "n1.5", "tone": "neutral", "toneInfo": {"name": "neutral", "ja": "無彩色", "image": ""}, "hue": 0, "hueName": "Bk", "rgb": {"r": 39, "g": 39, "b": 39}, "hex": "#272727", "cmyk": {"c": 83, "m": 79, "y": 77, "k": 61}, "interpolated": false, "neutralLevel": 1.5}]};
+
+// ===== Tone Map Layout =====
+// Positions: [x%, y%] in the tone map area
+// Based on PCCS tone concept diagram:
+//   High lightness top, Low lightness bottom
+//   Low saturation left, High saturation right
+// Tone positions: [x%, y%] — columns & rows aligned to grid
+// Columns: 15%, 35%, 55%, 84% (gap: 20, 20, 29 — v↔s wider)
+// Rows: 15%, 38%, 62%, 85%, b/s/dp at 27%/50%/73%
+const TONE_POSITIONS = {
+  p:   [15, 15],
+  lt:  [35, 15],
+  b:   [55, 27],
+  ltg: [15, 38],
+  sf:  [35, 38],
+  s:   [55, 50],
+  v:   [84, 50],
+  g:   [15, 62],
+  d:   [35, 62],
+  dp:  [55, 73],
+  dkg: [15, 85],
+  dk:  [35, 85]
+};
+
+const TONE_NAMES = {
+  v: ['vivid', 'ビビッド'], b: ['bright', 'ブライト'],
+  s: ['strong', 'ストロング'], dp: ['deep', 'ディープ'],
+  lt: ['light', 'ライト'], sf: ['soft', 'ソフト'],
+  d: ['dull', 'ダル'], dk: ['dark', 'ダーク'],
+  p: ['pale', 'ペール'], ltg: ['light grayish', 'ライトグレイッシュ'],
+  g: ['grayish', 'グレイッシュ'], dkg: ['dark grayish', 'ダークグレイッシュ']
+};
+
+const HUE_RING_RADIUS = 85;
+const V_RING_RADIUS = 135;
+const DOT_SIZE = 32;
+
+// ===== Build Color Lookup =====
+const colorMap = {};
+PCCS_DATA.colors.forEach(c => {
+  colorMap[c.id] = c;
+});
+
+// ===== Render Neutral Strip =====
+function renderNeutrals() {
+  const strip = document.getElementById('neutralStrip');
+  const neutrals = PCCS_DATA.colors.filter(c => c.tone === 'neutral' && c.neutralLevel % 1 !== 0)
+    .sort((a, b) => b.neutralLevel - a.neutralLevel);
+
+  neutrals.forEach(c => {
+    const label = document.createElement('div');
+    label.className = 'neutral-label';
+    label.textContent = c.neutralLevel >= 9.5 ? 'W' : c.neutralLevel <= 1.5 ? 'Bk' : c.neutralLevel.toFixed(1);
+
+    const cell = document.createElement('div');
+    cell.className = 'neutral-cell';
+    cell.style.backgroundColor = c.hex;
+    cell.dataset.colorId = c.id;
+
+    cell.addEventListener('mouseenter', e => showTooltip(e, c));
+    cell.addEventListener('mouseleave', hideTooltip);
+    cell.addEventListener('mousemove', moveTooltip);
+    cell.addEventListener('click', () => copyColor(c.hex));
+
+    const wrapper = document.createElement('div');
+    wrapper.style.display = 'flex';
+    wrapper.style.flexDirection = 'column';
+    wrapper.style.alignItems = 'center';
+    wrapper.style.gap = '1px';
+    wrapper.appendChild(label);
+    wrapper.appendChild(cell);
+    strip.appendChild(wrapper);
+  });
+}
+
+// ===== Render Tone Rings =====
+function renderToneRings() {
+  const map = document.getElementById('toneMap');
+
+  Object.entries(TONE_POSITIONS).forEach(([tone, [xPct, yPct]]) => {
+    const ring = document.createElement('div');
+    ring.className = 'tone-ring';
+    ring.style.left = xPct + '%';
+    ring.style.top = yPct + '%';
+    ring.style.width = '0';
+    ring.style.height = '0';
+
+    // Center label
+    const label = document.createElement('div');
+    label.className = 'tone-ring-label';
+    const names = TONE_NAMES[tone];
+    label.textContent = tone;
+    const sub = document.createElement('span');
+    sub.className = 'tone-ring-sublabel';
+    sub.textContent = names[1];
+    label.appendChild(sub);
+    ring.appendChild(label);
+
+    // 24 hue dots
+    for (let hue = 1; hue <= 24; hue++) {
+      const colorId = tone + hue;
+      const c = colorMap[colorId];
+      if (!c) continue;
+      if (c.interpolated) continue;
+
+      const radius = (tone === 'v') ? V_RING_RADIUS : HUE_RING_RADIUS;
+      const angle = ((hue - 1) * 15 - 90) * Math.PI / 180;
+      const x = Math.cos(angle) * radius;
+      const y = Math.sin(angle) * radius;
+
+      const dot = document.createElement('div');
+      dot.className = 'hue-dot' + (c.interpolated ? ' interpolated' : '');
+      dot.style.backgroundColor = c.hex;
+      dot.style.left = (x - DOT_SIZE / 2) + 'px';
+      dot.style.top = (y - DOT_SIZE / 2) + 'px';
+      dot.dataset.colorId = c.id;
+
+      dot.addEventListener('mouseenter', e => showTooltip(e, c));
+      dot.addEventListener('mouseleave', hideTooltip);
+      dot.addEventListener('mousemove', moveTooltip);
+      dot.addEventListener('click', () => copyColor(c.hex));
+
+      ring.appendChild(dot);
+    }
+
+    map.appendChild(ring);
+  });
+}
+
+// ===== Tooltip =====
+const tooltip = document.getElementById('tooltip');
+
+function showTooltip(e, c) {
+  if (typeof dragEl !== 'undefined' && dragEl) return;
+  const isNeutral = c.tone === 'neutral';
+  const toneName = isNeutral ? '無彩色' : (TONE_NAMES[c.tone] || ['',''])[1];
+  const title = isNeutral ? c.hueName : c.id.toUpperCase();
+  const subtitle = isNeutral
+    ? 'Neutral ' + c.neutralLevel
+    : toneName + ' / ' + c.hue + ':' + c.hueName;
+
+  tooltip.textContent = '';
+  const header = document.createElement('div');
+  header.className = 'tooltip-header';
+  const swatch = document.createElement('div');
+  swatch.className = 'tooltip-swatch';
+  swatch.style.backgroundColor = c.hex;
+  const info = document.createElement('div');
+  const titleEl = document.createElement('div');
+  titleEl.className = 'tooltip-title';
+  titleEl.textContent = title;
+  const subEl = document.createElement('div');
+  subEl.className = 'tooltip-subtitle';
+  subEl.textContent = subtitle;
+  info.appendChild(titleEl);
+  info.appendChild(subEl);
+  header.appendChild(swatch);
+  header.appendChild(info);
+  tooltip.appendChild(header);
+
+  function addRow(label, value) {
+    const row = document.createElement('div');
+    row.className = 'tooltip-row';
+    const lbl = document.createElement('span');
+    lbl.className = 'tooltip-label';
+    lbl.textContent = label;
+    const val = document.createElement('span');
+    val.className = 'tooltip-value';
+    val.textContent = value;
+    row.appendChild(lbl);
+    row.appendChild(val);
+    tooltip.appendChild(row);
+  }
+  addRow('HEX', c.hex);
+  addRow('RGB', c.rgb.r + ', ' + c.rgb.g + ', ' + c.rgb.b);
+  if (c.cmyk) {
+    addRow('CMYK', c.cmyk.c + ', ' + c.cmyk.m + ', ' + c.cmyk.y + ', ' + c.cmyk.k);
+  }
+  const hint = document.createElement('div');
+  hint.className = 'tooltip-copy-hint';
+  hint.textContent = 'クリックでHEXをコピー';
+  tooltip.appendChild(hint);
+  if (c.interpolated) {
+    const interp = document.createElement('div');
+    interp.className = 'tooltip-interp';
+    interp.textContent = '⚠ 補間値（隣接色の平均）';
+    tooltip.appendChild(interp);
+  }
+
+  tooltip.style.display = 'block';
+  moveTooltip(e);
+}
+
+function moveTooltip(e) {
+  const pad = 15;
+  let x = e.clientX + pad;
+  let y = e.clientY + pad;
+  const rect = tooltip.getBoundingClientRect();
+  if (x + rect.width > window.innerWidth) x = e.clientX - rect.width - pad;
+  if (y + rect.height > window.innerHeight) y = e.clientY - rect.height - pad;
+  x = Math.max(0, x);
+  y = Math.max(0, y);
+  tooltip.style.left = x + 'px';
+  tooltip.style.top = y + 'px';
+}
+
+function hideTooltip() {
+  tooltip.style.display = 'none';
+}
+
+// ===== Copy =====
+let toastTimer = null;
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 1500);
+}
+
+function copyColor(hex) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(hex).then(() => {
+      showToast(hex + ' をコピーしました!');
+    }).catch(() => {
+      fallbackCopy(hex);
+    });
+  } else {
+    fallbackCopy(hex);
+  }
+}
+
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px';
+  document.body.appendChild(ta);
+  try {
+    ta.select();
+    document.execCommand('copy');
+    showToast(text + ' をコピーしました!');
+  } catch (e) {
+    showToast('コピーに失敗しました');
+  } finally {
+    document.body.removeChild(ta);
+  }
+}
+
+// ===== RICOH Brand Colors =====
+const RICOH_COLORS = [
+  { name: 'RICOH Red', hex: '#CF122E', rgb: {r:207, g:18, b:46}, category: 'Primary' },
+  { name: 'Pink', hex: '#FF9AA8', rgb: {r:255, g:154, b:168}, category: 'Secondary' },
+  { name: 'Orange', hex: '#FFC13D', rgb: {r:255, g:193, b:61}, category: 'Secondary' },
+  { name: 'Green', hex: '#96C120', rgb: {r:150, g:193, b:32}, category: 'Secondary' },
+  { name: 'Cyan', hex: '#00A9C5', rgb: {r:0, g:169, b:197}, category: 'Secondary' },
+  { name: 'Blue', hex: '#5EA8E6', rgb: {r:94, g:168, b:230}, category: 'Secondary' },
+  { name: 'White', hex: '#FFFFFF', rgb: {r:255, g:255, b:255}, category: 'Primary' },
+  { name: 'Gray', hex: '#64666A', rgb: {r:100, g:102, b:106}, category: 'Primary' },
+];
+
+function showRicohTooltip(e, c) {
+  if (typeof dragEl !== 'undefined' && dragEl) return;
+  tooltip.textContent = '';
+  const header = document.createElement('div');
+  header.className = 'tooltip-header';
+  const swatch = document.createElement('div');
+  swatch.className = 'tooltip-swatch';
+  swatch.style.backgroundColor = c.hex;
+  if (c.hex === '#FFFFFF') swatch.style.border = '2px solid #ccc';
+  const info = document.createElement('div');
+  const titleEl = document.createElement('div');
+  titleEl.className = 'tooltip-title';
+  titleEl.textContent = c.name;
+  const subEl = document.createElement('div');
+  subEl.className = 'tooltip-subtitle';
+  subEl.textContent = c.category;
+  info.appendChild(titleEl);
+  info.appendChild(subEl);
+  header.appendChild(swatch);
+  header.appendChild(info);
+  tooltip.appendChild(header);
+
+  function addRow(lbl, val) {
+    const row = document.createElement('div');
+    row.className = 'tooltip-row';
+    const l = document.createElement('span');
+    l.className = 'tooltip-label';
+    l.textContent = lbl;
+    const v = document.createElement('span');
+    v.className = 'tooltip-value';
+    v.textContent = val;
+    row.appendChild(l);
+    row.appendChild(v);
+    tooltip.appendChild(row);
+  }
+  addRow('HEX', c.hex);
+  addRow('RGB', c.rgb.r + ', ' + c.rgb.g + ', ' + c.rgb.b);
+  const hint = document.createElement('div');
+  hint.className = 'tooltip-copy-hint';
+  hint.textContent = 'クリックでHEXをコピー';
+  tooltip.appendChild(hint);
+  tooltip.style.display = 'block';
+  moveTooltip(e);
+}
+
+function renderRicohRing() {
+  const map = document.getElementById('toneMap');
+  const ring = document.createElement('div');
+  ring.className = 'tone-ring';
+  ring.style.left = '84%';
+  ring.style.top = '85%';
+  ring.style.width = '0';
+  ring.style.height = '0';
+
+  const label = document.createElement('div');
+  label.className = 'tone-ring-label';
+  label.textContent = 'RICOH';
+  const sub = document.createElement('span');
+  sub.className = 'tone-ring-sublabel';
+  sub.textContent = 'ブランドカラー';
+  label.appendChild(sub);
+  ring.appendChild(label);
+
+  RICOH_COLORS.forEach((c, i) => {
+    const angle = (i * 45 - 90) * Math.PI / 180;
+    const x = Math.cos(angle) * HUE_RING_RADIUS;
+    const y = Math.sin(angle) * HUE_RING_RADIUS;
+
+    const dot = document.createElement('div');
+    dot.className = 'hue-dot';
+    dot.style.backgroundColor = c.hex;
+    if (c.hex === '#FFFFFF') {
+      dot.style.border = '2px solid rgba(200,200,200,0.6)';
+    }
+    dot.style.left = (x - DOT_SIZE / 2) + 'px';
+    dot.style.top = (y - DOT_SIZE / 2) + 'px';
+
+    dot.addEventListener('mouseenter', e => showRicohTooltip(e, c));
+    dot.addEventListener('mouseleave', hideTooltip);
+    dot.addEventListener('mousemove', moveTooltip);
+    dot.addEventListener('click', () => copyColor(c.hex));
+
+    ring.appendChild(dot);
+  });
+
+  map.appendChild(ring);
+}
+
+// ===== Init =====
+renderNeutrals();
+renderToneRings();
+renderRicohRing();
+
+// ===== Interactive: Drag & Scroll Resize =====
+let dragEl = null, dragStartX, dragStartY, dragBaseDx, dragBaseDy;
+let hasDragged = false;
+
+function getTS(el) {
+  return {
+    dx: parseFloat(el.dataset.dx || 0),
+    dy: parseFloat(el.dataset.dy || 0),
+    scale: parseFloat(el.dataset.scale || 1)
+  };
+}
+function applyTS(el) {
+  const s = getTS(el);
+  el.style.transform = 'translate(' + s.dx + 'px,' + s.dy + 'px) scale(' + s.scale + ')';
+}
+
+document.addEventListener('mousedown', function(e) {
+  var el = e.target.closest('.hue-dot, .neutral-cell');
+  if (!el) return;
+  e.preventDefault();
+  dragEl = el;
+  hasDragged = false;
+  var s = getTS(el);
+  dragBaseDx = s.dx;
+  dragBaseDy = s.dy;
+  dragStartX = e.clientX;
+  dragStartY = e.clientY;
+  el.style.zIndex = '500';
+  el.style.cursor = 'grabbing';
+  hideTooltip();
+});
+
+document.addEventListener('mousemove', function(e) {
+  if (!dragEl) return;
+  var dx = e.clientX - dragStartX;
+  var dy = e.clientY - dragStartY;
+  if (Math.abs(dx) > 3 || Math.abs(dy) > 3) hasDragged = true;
+  if (!hasDragged) return;
+  dragEl.dataset.dx = dragBaseDx + dx;
+  dragEl.dataset.dy = dragBaseDy + dy;
+  applyTS(dragEl);
+  hideTooltip();
+});
+
+document.addEventListener('mouseup', function() {
+  if (dragEl) {
+    dragEl.style.cursor = 'grab';
+    if (!hasDragged) dragEl.style.zIndex = '';
+    dragEl = null;
+  }
+});
+
+document.addEventListener('click', function(e) {
+  if (hasDragged) {
+    e.stopPropagation();
+    e.preventDefault();
+    hasDragged = false;
+  }
+}, true);
+
+document.addEventListener('wheel', function(e) {
+  var el = e.target.closest('.hue-dot, .neutral-cell');
+  if (!el) return;
+  e.preventDefault();
+  var s = getTS(el);
+  var delta = e.deltaY > 0 ? -0.15 : 0.15;
+  el.dataset.scale = Math.max(0.3, Math.min(5, s.scale + delta));
+  applyTS(el);
+}, { passive: false });
+</script>
+</body>
+</html>
